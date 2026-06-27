@@ -81,7 +81,19 @@ body{
 .gcard .ico{font-size:40px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
 .gcard .nm{font-size:18px;font-weight:900;letter-spacing:.3px}
 .gcard .ds{font-size:11.5px;opacity:.92;font-weight:600;margin-top:2px;line-height:1.35}
+.gcard .ico,.gcard .nm,.gcard .ds{position:relative;z-index:2}
 .gcard::after{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 80% 0%,rgba(255,255,255,.22),transparent 60%);pointer-events:none}
+/* glossy sheen sweep (staggered shimmer) */
+.gcard::before{
+  content:"";position:absolute;top:-25%;left:-80%;width:42%;height:150%;z-index:1;pointer-events:none;
+  background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.0) 35%,rgba(255,255,255,.38) 50%,rgba(255,255,255,0) 65%,transparent 100%);
+  transform:skewX(-16deg);animation:sheen 7s ease-in-out infinite;
+}
+@keyframes sheen{0%{left:-80%}13%{left:135%}13.01%,100%{left:135%}}
+.gcard:nth-child(2n)::before{animation-delay:1.2s}
+.gcard:nth-child(3n)::before{animation-delay:2.6s}
+.gcard:nth-child(4n)::before{animation-delay:3.9s}
+@media (prefers-reduced-motion:reduce){ .gcard::before{animation:none;display:none} }
 .c-roulette{background:linear-gradient(140deg,#ff5e9c,#b3258f)}
 .c-bomb{background:linear-gradient(140deg,#ff8a3d,#e0334e)}
 .c-russian{background:linear-gradient(140deg,#7b5bff,#4422b8)}
@@ -194,6 +206,7 @@ body{
 .d-dare{background:linear-gradient(150deg,#ff5e9c,#b3258f)}
 .d-drink{background:linear-gradient(150deg,#ff8a3d,#e0334e)}
 .d-all{background:linear-gradient(150deg,#7b5bff,#4422b8)}
+.d-custom{background:linear-gradient(150deg,#34e89e,#0f8f8f)}
 
 /* ---------- Would-you-rather card ---------- */
 .wyr-card{
@@ -457,8 +470,24 @@ body{
         <button class="btn" onclick="drawDare('any')">🎲 ランダム</button>
         <button class="btn gold" onclick="drawDare('drink')">🍺 飲むやつ</button>
       </div>
-      <div class="hint">真実 / 命令 / 一気 / 全員 — 引いた人が実行！イヤならその場で一気。</div>
+      <button class="btn ghost" onclick="go('custom')">✏️ 自分のお題を追加・編集</button>
+      <div class="hint">真実 / 命令 / 一気 / 全員 / MYお題 — 引いた人が実行！イヤならその場で一気。</div>
     </div>
+  </section>
+
+  <!-- CUSTOM お題 -->
+  <section class="screen" id="s-custom">
+    <div class="topbar"><button class="back" onclick="go('dare')">‹</button><div class="title-sm">✏️ カスタムお題</div></div>
+    <div class="hint" style="margin-bottom:10px">自分たちだけのお題を追加！<b>お題ガチャに混ざって</b>出ます。<br>例：「幹事が一気」「最近の待受を見せる」「一番最近の自撮りを公開」</div>
+    <div class="add-row">
+      <input id="cd-input" type="text" placeholder="お題を入力…" maxlength="60" autocomplete="off"
+        onkeydown="if(event.key==='Enter')addCustom()">
+      <button onclick="addCustom()">＋</button>
+    </div>
+    <div class="pl-list" id="cd-list"></div>
+    <div class="hint" id="cd-hint"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="go('dare')">お題ガチャへ戻る</button>
   </section>
 
   <!-- NEVER HAVE I EVER -->
@@ -576,6 +605,7 @@ function go(name){
   if(name==='would'){ resetWould(); }
   if(name==='king'){ resetKing(); }
   if(name==='settings'){ renderSettings(); }
+  if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
@@ -590,6 +620,7 @@ function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 /* ============ settings ============ */
 let settings = Object.assign({sound:true, vibe:true, spice:2}, load('nomigee_settings', {}));
 function saveSettings(){ save('nomigee_settings', settings); }
+let customDares = load('nomigee_custom', []);
 
 /* ============ member-name injection (personalization) ============ */
 const GENERIC_NAMES=['右の人','左の人','向かいの人','最年少','最年長','今日の幹事','一番お酒が強い人','メガネの人','一番最近来た人','一番声が大きい人'];
@@ -684,6 +715,26 @@ function addPlayer(){
   if(!v) return;
   players.push(v); save('nomigee_players',players); inp.value=''; renderPlayers();
   buzz(15);
+}
+
+/* ============ custom お題 ============ */
+function renderCustom(){
+  const list=$('#cd-list'); list.innerHTML='';
+  customDares.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='pl-item';
+    row.innerHTML=`<div class="pl-dot" style="background:#34e89e">✏️</div>
+      <input class="pl-name" value="${escapeHtml(p)}" maxlength="60" data-i="${i}">
+      <button class="pl-del" data-i="${i}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.pl-name').forEach(inp=>inp.oninput=e=>{ customDares[+e.target.dataset.i]=e.target.value; save('nomigee_custom',customDares); });
+  list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{ customDares.splice(+e.target.dataset.i,1); save('nomigee_custom',customDares); renderCustom(); });
+  $('#cd-hint').textContent = customDares.length ? `✏️ ${customDares.length}個 登録中（お題ガチャに混ざって出ます）` : 'まだ無し。自分たちのネタを追加しよう！';
+}
+function addCustom(){
+  const inp=$('#cd-input'); const v=inp.value.trim();
+  if(!v) return;
+  customDares.push(v); save('nomigee_custom',customDares); inp.value=''; renderCustom(); buzz(15);
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -908,6 +959,7 @@ const DARES_SPICY={
     'セクシーなウインクを全員に','好きな人の名前を伏せて特徴を3つ','隣の人の好きな所を熱く語る']
 };
 function darePool(type){
+  if(type==='custom') return customDares.length?customDares:DARES.dare;
   if(type==='drink'||type==='all') return DARES[type];
   let p=[...(DARES_SOFT[type]||[])];
   if(settings.spice>=2) p=p.concat(DARES[type]||[]);
@@ -918,13 +970,14 @@ const DARE_META={
   truth:{cls:'d-truth',ico:'💬',label:'TRUTH ・ 真実'},
   dare :{cls:'d-dare' ,ico:'🔥',label:'DARE ・ 命令'},
   drink:{cls:'d-drink',ico:'🍺',label:'DRINK ・ 一気'},
-  all  :{cls:'d-all'  ,ico:'🎉',label:'ALL ・ 全員'}
+  all  :{cls:'d-all'  ,ico:'🎉',label:'ALL ・ 全員'},
+  custom:{cls:'d-custom',ico:'✏️',label:'MY お題 ・ オリジナル'}
 };
 function drawDare(mode){
   audio(); buzz(20);
   let type;
   if(mode==='drink'){ type=Math.random()<0.6?'drink':'all'; }
-  else { const pool=['truth','dare','dare','drink','all','truth']; type=pool[Math.floor(Math.random()*pool.length)]; }
+  else { const pool=['truth','dare','dare','drink','all','truth']; if(customDares.length) pool.push('custom','custom'); type=pool[Math.floor(Math.random()*pool.length)]; }
   const arr=darePool(type); const text=fillNames(arr[Math.floor(Math.random()*arr.length)]);
   const m=DARE_META[type];
   const card=$('#dare-card');
