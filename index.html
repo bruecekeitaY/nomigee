@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0420">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>のみゲー 🍻 飲み会ゲーム</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0b0420; --bg2:#1a0a3a;
+  --card:#1c1140; --card2:#251552;
+  --neon:#ff2e88; --neon2:#7b5bff; --cyan:#19e3ff; --gold:#ffd84d; --green:#34e89e; --red:#ff4d5e;
+  --txt:#fff; --dim:#b9a9e6;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;
+  background:radial-gradient(120% 90% at 50% -10%, #2a0f5c 0%, var(--bg2) 38%, var(--bg) 100%);
+  color:var(--txt); overflow:hidden; user-select:none; -webkit-user-select:none;
+  position:fixed; inset:0;
+}
+#app{height:100%;width:100%;position:relative;overflow:hidden}
+.screen{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  padding:calc(var(--safe-top) + 14px) 18px calc(var(--safe-bot) + 18px);
+  opacity:0; transform:translateY(18px) scale(.98); pointer-events:none;
+  transition:opacity .28s ease, transform .28s ease; overflow-y:auto;
+}
+.screen.active{opacity:1;transform:none;pointer-events:auto}
+.screen::-webkit-scrollbar{display:none}
+
+/* ---------- Header ---------- */
+.topbar{display:flex;align-items:center;gap:10px;min-height:40px;margin-bottom:8px}
+.back{
+  width:42px;height:42px;border:none;border-radius:14px;flex:0 0 auto;
+  background:rgba(255,255,255,.08);color:#fff;font-size:20px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  backdrop-filter:blur(8px);transition:transform .1s, background .2s;
+}
+.back:active{transform:scale(.9);background:rgba(255,255,255,.16)}
+.title-sm{font-size:18px;font-weight:800;letter-spacing:.5px}
+.spacer{flex:1}
+
+/* ---------- Home ---------- */
+.hero{text-align:center;margin:6px 0 4px}
+.logo{
+  font-size:46px;font-weight:900;letter-spacing:1px;line-height:1.05;
+  background:linear-gradient(92deg,var(--neon),var(--gold) 45%,var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 18px rgba(255,46,136,.45));
+  animation:pop .6s cubic-bezier(.2,1.4,.4,1) both;
+}
+.logo .emoji{-webkit-text-fill-color:initial;filter:none}
+.tag{color:var(--dim);font-size:13px;margin-top:4px;font-weight:600}
+@keyframes pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;padding-bottom:8px}
+.gcard{
+  position:relative;border:none;border-radius:22px;padding:18px 14px 16px;cursor:pointer;
+  color:#fff;text-align:left;overflow:hidden;min-height:138px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:0 10px 28px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.15);
+  transition:transform .12s ease, box-shadow .2s;
+  animation:rise .5s both;
+}
+.gcard:active{transform:scale(.94)}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.gcard .ico{font-size:40px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.gcard .nm{font-size:18px;font-weight:900;letter-spacing:.3px}
+.gcard .ds{font-size:11.5px;opacity:.92;font-weight:600;margin-top:2px;line-height:1.35}
+.gcard::after{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 80% 0%,rgba(255,255,255,.22),transparent 60%);pointer-events:none}
+.c-roulette{background:linear-gradient(140deg,#ff5e9c,#b3258f)}
+.c-bomb{background:linear-gradient(140deg,#ff8a3d,#e0334e)}
+.c-russian{background:linear-gradient(140deg,#7b5bff,#4422b8)}
+.c-stop{background:linear-gradient(140deg,#19c8ff,#1466e0)}
+.c-dare{background:linear-gradient(140deg,#34e89e,#0f9b6c)}
+.c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
+
+/* ---------- Buttons ---------- */
+.btn{
+  border:none;border-radius:18px;padding:17px 22px;font-size:18px;font-weight:900;
+  color:#fff;cursor:pointer;width:100%;letter-spacing:.5px;
+  background:linear-gradient(92deg,var(--neon),var(--neon2));
+  box-shadow:0 8px 22px rgba(123,91,255,.45);
+  transition:transform .1s, filter .2s; touch-action:manipulation;
+}
+.btn:active{transform:scale(.96);filter:brightness(1.1)}
+.btn.big{padding:22px;font-size:22px;border-radius:24px}
+.btn.gold{background:linear-gradient(92deg,#ffb23d,var(--gold));color:#3a1d00;box-shadow:0 8px 22px rgba(255,184,61,.4)}
+.btn.green{background:linear-gradient(92deg,#1fd17a,var(--green));box-shadow:0 8px 22px rgba(52,232,158,.4)}
+.btn.ghost{background:rgba(255,255,255,.09);box-shadow:none;font-weight:700}
+.btn.red{background:linear-gradient(92deg,#ff5e6e,var(--red))}
+.btn:disabled{opacity:.4;filter:grayscale(.4)}
+.btn-row{display:flex;gap:12px}
+.btn-row .btn{width:auto;flex:1}
+
+/* generic centered content */
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+.hint{color:var(--dim);font-size:13.5px;font-weight:600;line-height:1.5}
+.big-name{font-size:clamp(34px,11vw,60px);font-weight:900;line-height:1.05}
+
+/* ---------- Players ---------- */
+.pl-list{display:flex;flex-direction:column;gap:10px;margin:10px 0 16px}
+.pl-item{
+  display:flex;align-items:center;gap:12px;background:var(--card);
+  border-radius:16px;padding:12px 14px;animation:rise .3s both;
+}
+.pl-dot{width:34px;height:34px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#1a0a3a}
+.pl-name{flex:1;font-size:17px;font-weight:700;background:none;border:none;color:#fff;outline:none;min-width:0}
+.pl-del{width:32px;height:32px;border:none;border-radius:10px;background:rgba(255,77,94,.18);color:#ff8a96;font-size:18px;font-weight:800;cursor:pointer}
+.pl-del:active{transform:scale(.9)}
+.add-row{display:flex;gap:10px;margin-bottom:14px}
+.add-row input{
+  flex:1;background:var(--card);border:2px solid transparent;border-radius:16px;
+  padding:15px 16px;color:#fff;font-size:17px;font-weight:600;outline:none;min-width:0;
+}
+.add-row input:focus{border-color:var(--neon2)}
+.add-row button{flex:0 0 auto;width:58px;border:none;border-radius:16px;background:linear-gradient(92deg,var(--neon),var(--neon2));color:#fff;font-size:26px;font-weight:800;cursor:pointer}
+.add-row button:active{transform:scale(.9)}
+
+/* ---------- Roulette ---------- */
+.wheel-wrap{position:relative;width:min(82vw,340px);height:min(82vw,340px);margin:6px auto}
+.wheel-wrap svg{width:100%;height:100%;transition:transform 5s cubic-bezier(.13,.86,.18,1)}
+.wheel-center{
+  position:absolute;top:50%;left:50%;width:62px;height:62px;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(#fff,#e7d7ff);box-shadow:0 0 0 6px var(--bg2),0 6px 16px rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;font-size:30px;z-index:3;
+}
+.pointer{
+  position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:4;
+  width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;
+  border-top:30px solid var(--gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));
+}
+
+/* ---------- Bomb ---------- */
+.bomb{font-size:clamp(90px,30vw,150px);line-height:1;filter:drop-shadow(0 8px 20px rgba(255,80,40,.6));animation:wob 1s ease-in-out infinite}
+@keyframes wob{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.bomb.fast{animation-duration:.28s}
+.task-bubble{
+  background:rgba(255,255,255,.1);border-radius:20px;padding:16px 18px;font-size:19px;font-weight:800;
+  line-height:1.4;border:1.5px solid rgba(255,255,255,.16);max-width:92%;
+}
+
+/* ---------- Russian (cups) ---------- */
+.cup-grid{display:grid;gap:14px;width:100%;max-width:340px;margin:0 auto}
+.cup{
+  aspect-ratio:1;border:none;border-radius:18px;background:linear-gradient(160deg,#2a1a5e,#1a0f3d);
+  font-size:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.1),0 6px 14px rgba(0,0,0,.35);
+  transition:transform .1s;
+}
+.cup:active{transform:scale(.92)}
+.cup.safe{background:linear-gradient(160deg,#0f6b4a,#0a4d35);animation:none}
+.cup.boom{background:linear-gradient(160deg,#ff5e3a,#c01020);animation:shake .4s}
+.cup:disabled{cursor:default}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+
+/* ---------- Stop timer ---------- */
+.stopnum{font-size:clamp(60px,22vw,120px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:2px}
+.target{font-size:20px;font-weight:800;color:var(--gold)}
+.score-list{width:100%;max-width:360px;display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.score-row{display:flex;justify-content:space-between;background:var(--card);border-radius:12px;padding:11px 16px;font-weight:700;font-size:15px}
+.score-row.worst{background:linear-gradient(92deg,#ff5e6e,#c01020)}
+
+/* ---------- Dare card ---------- */
+.dare-card{
+  width:100%;max-width:360px;border-radius:26px;padding:26px 22px;min-height:240px;
+  display:flex;flex-direction:column;gap:14px;justify-content:center;align-items:center;text-align:center;
+  box-shadow:0 16px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2);
+  animation:flip .4s ease both;
+}
+@keyframes flip{from{opacity:0;transform:rotateY(40deg) scale(.9)}to{opacity:1;transform:none}}
+.dare-type{font-size:13px;font-weight:900;letter-spacing:3px;opacity:.85}
+.dare-ico{font-size:54px}
+.dare-text{font-size:23px;font-weight:900;line-height:1.45}
+.d-truth{background:linear-gradient(150deg,#19c8ff,#1466e0)}
+.d-dare{background:linear-gradient(150deg,#ff5e9c,#b3258f)}
+.d-drink{background:linear-gradient(150deg,#ff8a3d,#e0334e)}
+.d-all{background:linear-gradient(150deg,#7b5bff,#4422b8)}
+
+/* ---------- result flash ---------- */
+.flash{
+  position:absolute;inset:0;z-index:60;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;
+  background:radial-gradient(80% 60% at 50% 40%,rgba(255,46,136,.96),rgba(11,4,32,.98));
+  animation:flashin .35s ease both;
+}
+.flash.show{display:flex}
+@keyframes flashin{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
+.flash .loser-label{font-size:18px;font-weight:800;letter-spacing:4px;color:#ffd84d}
+.flash .loser-name{font-size:clamp(40px,14vw,80px);font-weight:900;line-height:1.05;text-shadow:0 4px 16px rgba(0,0,0,.5)}
+.flash .drink{font-size:64px;animation:wob .8s ease-in-out infinite}
+
+/* confetti */
+.confetti{position:absolute;top:-10px;width:10px;height:16px;border-radius:2px;z-index:55;pointer-events:none}
+
+.note{font-size:11px;color:var(--dim);text-align:center;opacity:.7;margin-top:auto;padding-top:12px}
+.warn{font-size:12px;color:var(--gold);text-align:center;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section class="screen active" id="s-home">
+    <div class="hero">
+      <div class="logo"><span class="emoji">🍻</span> のみゲー</div>
+      <div class="tag">負けたら飲む。それだけ。</div>
+    </div>
+    <div class="grid">
+      <button class="gcard c-roulette" onclick="go('roulette')">
+        <div class="ico">🎯</div><div><div class="nm">ルーレット</div><div class="ds">運命の輪が回る。止まった人が飲む</div></div>
+      </button>
+      <button class="gcard c-bomb" onclick="go('bomb')">
+        <div class="ico">💣</div><div><div class="nm">時限爆弾</div><div class="ds">お題に答えて隣へ。爆発した人が飲む</div></div>
+      </button>
+      <button class="gcard c-russian" onclick="go('russian')">
+        <div class="ico">🍺</div><div><div class="nm">ロシアン</div><div class="ds">コップを選べ。アタリを引いたら飲む</div></div>
+      </button>
+      <button class="gcard c-stop" onclick="go('stop')">
+        <div class="ico">⏱️</div><div><div class="nm">ぴったりSTOP</div><div class="ds">10.00秒で止めろ。一番ズレた人が飲む</div></div>
+      </button>
+      <button class="gcard c-dare" onclick="go('dare')">
+        <div class="ico">🎴</div><div><div class="nm">お題ガチャ</div><div class="ds">真実・命令・一気。引いたお題をやる</div></div>
+      </button>
+      <button class="gcard c-players" onclick="go('players')">
+        <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
+      </button>
+    </div>
+    <div class="note">飲みすぎ注意 🚱 楽しく適量に。20歳未満は飲酒禁止。</div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section class="screen" id="s-players">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">👥 メンバー登録</div></div>
+    <div class="add-row">
+      <input id="pl-input" type="text" placeholder="名前を入力…" maxlength="10" autocomplete="off"
+        onkeydown="if(event.key==='Enter')addPlayer()">
+      <button onclick="addPlayer()">＋</button>
+    </div>
+    <div class="pl-list" id="pl-list"></div>
+    <div class="hint" id="pl-hint"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="go('home')">完了してホームへ</button>
+  </section>
+
+  <!-- ROULETTE -->
+  <section class="screen" id="s-roulette">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🎯 運命のルーレット</div></div>
+    <div class="center">
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <svg id="wheel" viewBox="0 0 200 200"></svg>
+        <div class="wheel-center">🍷</div>
+      </div>
+      <div class="hint" id="rl-hint">メンバーを登録して回そう！</div>
+      <button class="btn big gold" id="rl-spin" onclick="spinWheel()">🎯 まわす！</button>
+      <button class="btn ghost" onclick="go('players')">メンバーを編集</button>
+    </div>
+  </section>
+
+  <!-- BOMB -->
+  <section class="screen" id="s-bomb">
+    <div class="topbar"><button class="back" onclick="stopBomb();go('home')">‹</button><div class="title-sm">💣 時限爆弾</div></div>
+    <div class="center" id="bomb-stage">
+      <div class="bomb" id="bomb-emoji">💣</div>
+      <div class="task-bubble" id="bomb-task">スタートを押すと爆弾に火がつく。<br>お題に答えたら隣の人へ手渡し！</div>
+      <div class="hint" id="bomb-hint">制限時間はランダム（10〜45秒）。持ってる人が負け。</div>
+      <button class="btn big red" id="bomb-btn" onclick="bombMain()">🔥 スタート</button>
+    </div>
+  </section>
+
+  <!-- RUSSIAN -->
+  <section class="screen" id="s-russian">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🍺 ロシアンルーレット</div></div>
+    <div class="center">
+      <div class="hint" id="ru-hint">どれか1つがアタリ。順番にコップを選べ！</div>
+      <div class="cup-grid" id="cup-grid"></div>
+      <button class="btn ghost" id="ru-reset" onclick="resetRussian()">新しいゲーム / 個数変更</button>
+    </div>
+  </section>
+
+  <!-- STOP -->
+  <section class="screen" id="s-stop">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">⏱️ ぴったりSTOP</div></div>
+    <div class="center">
+      <div class="target">🎯 ねらい目： <span id="st-target">10.00</span> 秒</div>
+      <div class="stopnum" id="st-num">0.00</div>
+      <div class="hint" id="st-hint">スタート→画面が隠れる→ぴったりだと思ったらSTOP！</div>
+      <button class="btn big green" id="st-btn" onclick="stopMain()">▶ スタート</button>
+      <div class="score-list" id="st-scores"></div>
+      <button class="btn ghost" id="st-judge" style="display:none" onclick="judgeStop()">結果発表 → 負けを決める</button>
+    </div>
+  </section>
+
+  <!-- DARE -->
+  <section class="screen" id="s-dare">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🎴 お題ガチャ</div></div>
+    <div class="center">
+      <div class="dare-card d-truth" id="dare-card">
+        <div class="dare-ico">🎴</div>
+        <div class="dare-text">ボタンを押してお題を引こう！</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="drawDare('any')">🎲 ランダム</button>
+        <button class="btn gold" onclick="drawDare('drink')">🍺 飲むやつ</button>
+      </div>
+      <div class="hint">真実 / 命令 / 一気 / 全員 — 引いた人が実行！イヤならその場で一気。</div>
+    </div>
+  </section>
+
+  <!-- result flash overlay -->
+  <div class="flash" id="flash">
+    <div class="drink">🍺</div>
+    <div class="loser-label" id="flash-label">DRINK!</div>
+    <div class="loser-name" id="flash-name"></div>
+    <button class="btn gold" style="max-width:260px" onclick="hideFlash()">のんだ！もう一回 🍻</button>
+  </div>
+
+</div>
+
+<script>
+/* ============ core / storage ============ */
+const $ = s => document.querySelector(s);
+const screens = [...document.querySelectorAll('.screen')];
+let current = 'home';
+
+function go(name){
+  if(name==='roulette'){ buildWheel(); }
+  if(name==='russian'){ ensureRussian(); }
+  if(name==='players'){ renderPlayers(); setTimeout(()=>$('#pl-input').focus(),300); }
+  if(name==='stop'){ initStop(); }
+  if(name==='bomb'){ resetBombUI(); }
+  if(current==='bomb' && name!=='bomb') stopBomb();
+  screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
+  document.getElementById('s-'+name).scrollTop = 0;
+  current = name;
+}
+
+const COLORS = ['#ff2e88','#7b5bff','#19e3ff','#ffd84d','#34e89e','#ff8a3d','#ff5e6e','#b06bff','#3dd6ff','#ffb23d'];
+let players = load('nomigee_players', ['たろう','はなこ','けんじ','ゆい']);
+function load(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } }
+function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
+
+/* ============ haptics + sound ============ */
+function buzz(ms){ if(navigator.vibrate) navigator.vibrate(ms); }
+let actx=null;
+function audio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)() }catch(e){} } if(actx&&actx.state==='suspended') actx.resume(); return actx; }
+function beep(freq=440,dur=0.08,type='square',gain=0.2){
+  const a=audio(); if(!a) return;
+  const o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.value=freq; o.connect(g); g.connect(a.destination);
+  g.gain.setValueAtTime(gain,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+  o.start(); o.stop(a.currentTime+dur);
+}
+function explosion(){
+  const a=audio(); if(!a){ buzz([200,80,400]); return; }
+  const o=a.createOscillator(), g=a.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(180,a.currentTime);
+  o.frequency.exponentialRampToValueAtTime(30,a.currentTime+0.6);
+  g.gain.setValueAtTime(0.5,a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.7);
+  o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+0.7);
+  // noise
+  const buf=a.createBuffer(1,a.sampleRate*0.4,a.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const src=a.createBufferSource(); const ng=a.createGain(); ng.gain.value=0.4;
+  src.buffer=buf; src.connect(ng); ng.connect(a.destination); src.start();
+  buzz([300,60,500]);
+}
+function fanfare(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,0.18,'triangle',0.25),i*90));
+  buzz([60,40,60,40,180]);
+}
+
+/* ============ confetti + loser flash ============ */
+function confetti(){
+  const app=$('#app');
+  for(let i=0;i<60;i++){
+    const c=document.createElement('div'); c.className='confetti';
+    c.style.left=Math.random()*100+'%';
+    c.style.background=COLORS[i%COLORS.length];
+    c.style.transform='rotate('+Math.random()*360+'deg)';
+    app.appendChild(c);
+    const dx=(Math.random()-0.5)*160, dur=1400+Math.random()*1200, rot=Math.random()*720;
+    c.animate([
+      {transform:`translate(0,0) rotate(0deg)`,opacity:1},
+      {transform:`translate(${dx}px,${window.innerHeight+60}px) rotate(${rot}deg)`,opacity:1}
+    ],{duration:dur,easing:'cubic-bezier(.2,.6,.4,1)'}).onfinish=()=>c.remove();
+  }
+}
+function showLoser(name,label='飲むのは…'){
+  $('#flash-label').textContent=label;
+  $('#flash-name').textContent=name;
+  $('#flash').classList.add('show');
+  fanfare(); confetti();
+}
+function hideFlash(){ $('#flash').classList.remove('show'); }
+
+/* ============ PLAYERS ============ */
+function renderPlayers(){
+  const list=$('#pl-list'); list.innerHTML='';
+  players.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='pl-item';
+    const col=COLORS[i%COLORS.length];
+    row.innerHTML=`<div class="pl-dot" style="background:${col}">${(p[0]||'?')}</div>
+      <input class="pl-name" value="${escapeHtml(p)}" maxlength="10" data-i="${i}">
+      <button class="pl-del" data-i="${i}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.pl-name').forEach(inp=>inp.oninput=e=>{ players[+e.target.dataset.i]=e.target.value; save('nomigee_players',players); });
+  list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{ players.splice(+e.target.dataset.i,1); save('nomigee_players',players); renderPlayers(); });
+  $('#pl-hint').textContent = players.length<2 ? '⚠️ 2人以上で登録してね' : `👥 ${players.length}人 登録中`;
+}
+function addPlayer(){
+  const inp=$('#pl-input'); const v=inp.value.trim();
+  if(!v) return;
+  players.push(v); save('nomigee_players',players); inp.value=''; renderPlayers();
+  buzz(15);
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ ROULETTE ============ */
+let wheelRot=0, spinning=false;
+function buildWheel(){
+  const svg=$('#wheel'); const n=players.length;
+  svg.style.transition='none'; svg.style.transform='rotate(0deg)'; wheelRot=0;
+  if(n<2){ svg.innerHTML='<text x="100" y="105" text-anchor="middle" fill="#b9a9e6" font-size="11">メンバーを2人以上登録</text>';
+    $('#rl-hint').textContent='メンバー編集から2人以上登録してね'; $('#rl-spin').disabled=true; return; }
+  $('#rl-spin').disabled=false; $('#rl-hint').textContent=`${n}人で勝負！ボタンでスピン`;
+  const seg=360/n; let html='';
+  for(let i=0;i<n;i++){
+    const a0=i*seg-90, a1=(i+1)*seg-90;
+    const p0=polar(100,100,98,a0), p1=polar(100,100,98,a1);
+    const large=seg>180?1:0;
+    html+=`<path d="M100,100 L${p0.x},${p0.y} A98,98 0 ${large} 1 ${p1.x},${p1.y} Z" fill="${COLORS[i%COLORS.length]}" stroke="#0b0420" stroke-width="1.5"/>`;
+    const tp=polar(100,100,64,a0+seg/2);
+    const rot=a0+seg/2+90;
+    html+=`<text x="${tp.x}" y="${tp.y}" fill="#1a0a3a" font-size="${Math.min(13,90/n+5)}" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rot} ${tp.x} ${tp.y})">${escapeHtml(players[i].slice(0,6))}</text>`;
+  }
+  svg.innerHTML=html;
+}
+function polar(cx,cy,r,deg){ const a=deg*Math.PI/180; return {x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; }
+function spinWheel(){
+  if(spinning||players.length<2) return;
+  spinning=true; audio(); $('#rl-spin').disabled=true;
+  const n=players.length, seg=360/n;
+  const winner=Math.floor(Math.random()*n);
+  // Segment i center sits at angle (i*seg + seg/2 - 90) in screen polar coords (0°=east, +=clockwise),
+  // and the pointer marks the top (= -90° ≡ 270°). To place the winner under the pointer we need the
+  // wheel's absolute rotation R to satisfy (winner*seg + seg/2 - 90) + R ≡ -90  →  R ≡ -(winner*seg + seg/2).
+  // Add jitter within the segment so it doesn't always stop dead-center, and respect accumulated rotation.
+  const jitter=(Math.random()-0.5)*seg*0.7;
+  const needed=(((-(winner*seg+seg/2)+jitter)%360)+360)%360;
+  const currentMod=((wheelRot%360)+360)%360;
+  const delta=((needed-currentMod)%360+360)%360;
+  wheelRot += 360*6 + delta;
+  const svg=$('#wheel');
+  svg.style.transition='transform 5s cubic-bezier(.13,.86,.18,1)';
+  svg.style.transform=`rotate(${wheelRot}deg)`;
+  let last=0;
+  const tickInt=setInterval(()=>{ beep(800,0.03,'square',0.08); },120);
+  setTimeout(()=>{ clearInterval(tickInt); },4200);
+  $('#rl-hint').textContent='🌀 回転中…';
+  setTimeout(()=>{
+    spinning=false; $('#rl-spin').disabled=false;
+    $('#rl-hint').textContent=`🍷 ${players[winner]} の負け！`;
+    showLoser(players[winner]);
+  },5100);
+}
+
+/* ============ BOMB ============ */
+const BOMB_TASKS=[
+  '好きな食べ物を言って','右の人を褒めて','最近一番笑ったことは？','モノマネを1つ','嫌いな野菜を言って',
+  '今日のラッキーカラーは？','県名を1つ言って','동물の名前を1つ','芸能人を1人','好きな飲み物を言って',
+  '昨日の夜ごはんは？','行きたい国を言って','カラオケの十八番は？','子供の頃の夢は？','果物の名前を1つ',
+  '左の人とハイタッチ','変顔を1つ','寿司ネタを1つ言って','好きな映画を1つ','テンション高く「乾杯！」',
+  '色の名前を1つ','スポーツを1つ言って','人差し指で鼻にタッチ','「ありがとう」を別の言葉で','元気よく自己紹介'
+];
+let bombTimer=null, bombTick=null, bombRunning=false;
+function resetBombUI(){
+  $('#bomb-emoji').className='bomb'; $('#bomb-emoji').textContent='💣';
+  $('#bomb-task').innerHTML='スタートを押すと爆弾に火がつく。<br>お題に答えたら隣の人へ手渡し！';
+  $('#bomb-btn').textContent='🔥 スタート'; $('#bomb-btn').className='btn big red';
+  $('#bomb-hint').style.display='';
+}
+function bombMain(){
+  audio();
+  if(!bombRunning){ startBomb(); }
+  else { nextTask(); }
+}
+function startBomb(){
+  bombRunning=true; $('#bomb-hint').style.display='none';
+  const dur = 10000 + Math.random()*35000; // 10-45s
+  const end = Date.now()+dur;
+  $('#bomb-btn').textContent='✅ 答えた！次の人へ';
+  $('#bomb-btn').className='btn big gold';
+  nextTask();
+  let interval=900;
+  const tick=()=>{
+    const left=end-Date.now();
+    if(left<=0){ boom(); return; }
+    beep(left<4000?1200:900, 0.04,'square',0.12);
+    $('#bomb-emoji').className = left<6000 ? 'bomb fast' : 'bomb';
+    interval = Math.max(150, left/8);
+    bombTick=setTimeout(tick, interval);
+  };
+  tick();
+}
+function nextTask(){
+  buzz(12);
+  $('#bomb-task').textContent = BOMB_TASKS[Math.floor(Math.random()*BOMB_TASKS.length)];
+}
+function boom(){
+  stopBomb();
+  $('#bomb-emoji').textContent='💥'; $('#bomb-emoji').className='bomb fast';
+  $('#bomb-task').textContent='ドカーン！💥 今持ってる人が一気！';
+  $('#bomb-btn').textContent='🔄 もう一回'; $('#bomb-btn').className='btn big red';
+  explosion();
+  showLoser('今のキミ！','爆発！飲むのは…');
+}
+function stopBomb(){
+  bombRunning=false;
+  if(bombTick){ clearTimeout(bombTick); bombTick=null; }
+  if(bombTimer){ clearTimeout(bombTimer); bombTimer=null; }
+}
+
+/* ============ RUSSIAN ============ */
+let ruCount=load('nomigee_rucount',6), ruBomb=-1, ruOver=false, ruPicks=0;
+function ensureRussian(){ if(!$('#cup-grid').children.length || ruOver) resetRussian(); }
+function resetRussian(){
+  // simple count chooser cycle 4->6->9->4
+  if($('#cup-grid').children.length){ ruCount = ruCount===4?6: ruCount===6?9:4; save('nomigee_rucount',ruCount); }
+  ruBomb=Math.floor(Math.random()*ruCount); ruOver=false; ruPicks=0;
+  const grid=$('#cup-grid');
+  const cols = ruCount<=4?2:3;
+  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.innerHTML='';
+  for(let i=0;i<ruCount;i++){
+    const b=document.createElement('button'); b.className='cup'; b.textContent='🍺'; b.dataset.i=i;
+    b.onclick=()=>pickCup(i,b);
+    grid.appendChild(b);
+  }
+  $('#ru-hint').textContent=`${ruCount}個のうち1個がアタリ。順番に選べ！`;
+  $('#ru-reset').textContent='新しいゲーム / 個数変更 (今:'+ruCount+')';
+}
+function pickCup(i,b){
+  if(ruOver||b.disabled) return;
+  audio(); ruPicks++;
+  if(i===ruBomb){
+    b.classList.add('boom'); b.textContent='💥'; ruOver=true;
+    explosion();
+    $('#ru-hint').textContent='💥 アタリ！今選んだ人が飲む！';
+    [...$('#cup-grid').children].forEach(c=>c.disabled=true);
+    setTimeout(()=>showLoser('今選んだキミ！','一気！'),300);
+  } else {
+    b.classList.add('safe'); b.textContent='✅'; b.disabled=true;
+    beep(700,0.06,'triangle',0.15); buzz(15);
+    const left=ruCount-ruPicks;
+    $('#ru-hint').textContent= left<=1 ? '😱 残り1個…！' : `セーフ！残り ${left} 個。次の人へ`;
+  }
+}
+
+/* ============ STOP ============ */
+let stTarget=10, stRunning=false, stStart=0, stRaf=null, stHidden=false;
+let stScores=[];
+function initStop(){
+  stScores=[]; renderStopScores();
+  stTarget=10; $('#st-target').textContent='10.00';
+  $('#st-num').textContent='0.00'; $('#st-num').style.color='';
+  $('#st-btn').textContent='▶ スタート'; $('#st-btn').className='btn big green';
+  $('#st-hint').textContent='スタート→数字が隠れる→10秒だと思ったらSTOP！';
+  $('#st-judge').style.display='none';
+  stRunning=false; stHidden=false;
+}
+function stopMain(){
+  audio();
+  if(!stRunning){
+    stRunning=true; stHidden=true; stStart=performance.now();
+    $('#st-num').textContent='🙈'; $('#st-num').style.color='var(--dim)';
+    $('#st-btn').textContent='⏹ STOP！'; $('#st-btn').className='btn big red';
+    $('#st-hint').textContent='数字は見えない！カンで10.00秒を狙え';
+  } else {
+    stRunning=false;
+    const t=(performance.now()-stStart)/1000;
+    const diff=Math.abs(t-stTarget);
+    $('#st-num').textContent=t.toFixed(2);
+    $('#st-num').style.color = diff<0.2?'var(--green)':diff<0.6?'var(--gold)':'var(--red)';
+    $('#st-btn').textContent='▶ 次の人';
+    $('#st-btn').className='btn big green';
+    const nm = prompt? null : null;
+    const label = players[stScores.length] || ('Player'+(stScores.length+1));
+    stScores.push({name:label, time:t, diff});
+    $('#st-hint').textContent = `${label}: ${t.toFixed(2)}秒（ズレ ${diff.toFixed(2)}）`;
+    beep(diff<0.2?1000:500,0.12,'triangle',0.2); buzz(diff<0.2?[20,40,20]:20);
+    renderStopScores();
+    if(stScores.length>=Math.max(2,players.length)){ $('#st-judge').style.display=''; }
+    else $('#st-judge').style.display='';
+  }
+}
+function renderStopScores(){
+  const box=$('#st-scores'); box.innerHTML='';
+  let worst=-1,wi=-1; stScores.forEach((s,i)=>{ if(s.diff>worst){worst=s.diff;wi=i;} });
+  stScores.forEach((s,i)=>{
+    const r=document.createElement('div'); r.className='score-row'+(i===wi&&stScores.length>1?' worst':'');
+    r.innerHTML=`<span>${escapeHtml(s.name)}</span><span>${s.time.toFixed(2)}秒 / ズレ${s.diff.toFixed(2)}</span>`;
+    box.appendChild(r);
+  });
+}
+function judgeStop(){
+  if(!stScores.length) return;
+  let worst=-1,wi=-1; stScores.forEach((s,i)=>{ if(s.diff>worst){worst=s.diff;wi=i;} });
+  showLoser(stScores[wi].name, '一番ズレた…飲むのは');
+}
+
+/* ============ DARE ============ */
+const DARES={
+  truth:['初恋はいつ？','今ここで一番気になる人は？','人生最大の失敗は？','スマホの最近の検索履歴を1つ','今までで一番の嘘は？',
+    '隣の人の第一印象は？','財布にいくら入ってる？','最近こっそりハマってる事は？','行きつけのお店を白状','直近のスクショを見せる',
+    '今日イチでテンション下がった瞬間は？','実は苦手な人のタイプは？','一番お金を使った趣味は？','寝る前の癖は？','この中で恋人にするなら？'],
+  dare:['好きな人のモノマネをする','セクシーポーズで写真を撮られる','変な踊りを15秒','右の人に告白する（演技）','鼻歌で曲当てクイズ出題',
+    '一番面白い顔をキープ10秒','腕立て5回','好きな歌をサビだけ熱唱','店員さん風に注文の口上','赤ちゃん言葉で1分話す',
+    '誰かとデュエット','隣の人と腕を組んで乾杯','一発ギャグ','スマホの待受を見せる','全員と目を合わせてウインク'],
+  drink:['あなたが一気！','飲んでないと思う人を指名→その人が飲む','左隣と一緒に飲む','全員で乾杯して半分飲む','時計回りに全員ひと口',
+    '一番年下が飲む','メガネの人が飲む（いなければ自分）','最後に来た人が飲む','スマホを今触ってた人が飲む','じゃんけんして負けが飲む'],
+  all:['全員一気！🍻','男性陣 飲む','女性陣 飲む','一番声がデカい人が飲む','「乾杯」と最後に言った人以外飲む',
+    '全員ひと口→一番遅かった人がもう一杯','親指を最後にテーブルに置いた人が飲む','全員でチアーズ、半分']
+};
+const DARE_META={
+  truth:{cls:'d-truth',ico:'💬',label:'TRUTH ・ 真実'},
+  dare :{cls:'d-dare' ,ico:'🔥',label:'DARE ・ 命令'},
+  drink:{cls:'d-drink',ico:'🍺',label:'DRINK ・ 一気'},
+  all  :{cls:'d-all'  ,ico:'🎉',label:'ALL ・ 全員'}
+};
+function drawDare(mode){
+  audio(); buzz(20);
+  let type;
+  if(mode==='drink'){ type=Math.random()<0.6?'drink':'all'; }
+  else { const pool=['truth','dare','dare','drink','all','truth']; type=pool[Math.floor(Math.random()*pool.length)]; }
+  const arr=DARES[type]; const text=arr[Math.floor(Math.random()*arr.length)];
+  const m=DARE_META[type];
+  const card=$('#dare-card');
+  card.className='dare-card '+m.cls;
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  card.innerHTML=`<div class="dare-type">${m.label}</div><div class="dare-ico">${m.ico}</div><div class="dare-text">${escapeHtml(text)}</div>`;
+  beep(660,0.1,'triangle',0.2);
+  if(type==='drink'||type==='all'){ setTimeout(()=>{fanfare();confetti();},150); }
+}
+
+/* unlock audio on first touch */
+document.addEventListener('touchstart',()=>audio(),{once:true});
+document.addEventListener('click',()=>audio(),{once:true});
+
+/* PWA */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
