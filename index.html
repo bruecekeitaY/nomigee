@@ -400,6 +400,12 @@ body{
 .sc-adj{width:34px;height:34px;border:none;border-radius:10px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto;background:rgba(52,232,158,.18);color:var(--green)}
 .sc-adj.minus{background:rgba(255,77,94,.18);color:#ff8a96}
 .sc-adj:active{transform:scale(.88)}
+/* ---------- vote chips (Most Likely To) ---------- */
+.vote-panel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:380px;margin:2px 0}
+.vote-chip{display:flex;align-items:center;gap:8px;border:2px solid var(--vc,#ff2e88);background:rgba(255,255,255,.06);color:#fff;border-radius:14px;padding:9px 12px;font-size:15px;font-weight:800;cursor:pointer;transition:transform .1s}
+.vote-chip:active{transform:scale(.9)}
+.vote-chip .vc-n{min-width:22px;height:22px;border-radius:7px;background:var(--vc);color:#1a0a3a;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}
+
 /* ---------- How-to guide ---------- */
 #howto-list{display:flex;flex-direction:column;gap:10px}
 .howto-card{display:flex;gap:12px;background:var(--card);border-radius:14px;padding:12px 14px;animation:rise .3s both;border-left:4px solid var(--hc,#ff2e88)}
@@ -684,11 +690,12 @@ body{
         <div class="dare-ico">👉</div>
         <div class="dare-text">ボタンを押してお題を引こう！</div>
       </div>
+      <div class="vote-panel" id="most-votes" style="display:none"></div>
       <div class="btn-row">
         <button class="btn" id="most-q" onclick="drawMost()">🎲 お題を引く</button>
-        <button class="btn gold" id="most-reveal" onclick="revealMost()" disabled>👉 指名！結果</button>
+        <button class="btn gold" id="most-reveal" onclick="revealMost()" disabled>🗳️ 結果発表</button>
       </div>
-      <div class="hint">お題を読む→「せーの」で全員が一番ヤバい人を指さす。<br>「結果」で最多票を決めて飲ませよう（メンバー登録でランダム指名も）。</div>
+      <div class="hint">お題を読む→せーので一番ヤバい人を指さす。<br><b>指された人をタップして投票</b>→「結果発表」で最多票が飲む（未登録なら指名でOK）。</div>
     </div>
   </section>
 
@@ -1424,10 +1431,20 @@ const MOST=[
   '一番マイペースそう','給料日に散財しそう','一番タフそう','プレゼント選びが上手そう','一番笑い上戸そう',
   '二度寝で遅刻しそう','一番世話焼きそう','流行に詳しそう','一番ロマンチックな告白をしそう','寝相が悪そう'
 ];
-let mostIdx=[];
+let mostIdx=[], mostVotes={};
 function resetMost(){
   const c=$('#most-card'); c.querySelector('.dare-text').textContent='ボタンを押してお題を引こう！';
   $('#most-reveal').disabled=true;
+  mostVotes={}; $('#most-votes').style.display='none'; $('#most-votes').innerHTML='';
+}
+function renderMostVotes(){
+  const box=$('#most-votes'); box.innerHTML='';
+  players.forEach((p,i)=>{
+    const b=document.createElement('button'); b.className='vote-chip'; b.style.setProperty('--vc',COLORS[i%COLORS.length]);
+    b.innerHTML=`<span>${escapeHtml(p)}</span><span class="vc-n">${mostVotes[p]||0}</span>`;
+    b.onclick=()=>{ mostVotes[p]=(mostVotes[p]||0)+1; renderMostVotes(); beep(620,0.04,'square',0.1); buzz(6); };
+    box.appendChild(b);
+  });
 }
 function drawMost(){
   audio(); buzz(15);
@@ -1437,16 +1454,20 @@ function drawMost(){
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   card.querySelector('.dare-text').textContent=text;
   $('#most-reveal').disabled=false;
+  mostVotes={};
+  if(players.length>=2){ renderMostVotes(); $('#most-votes').style.display='flex'; }
+  else { $('#most-votes').style.display='none'; }
   beep(620,0.1,'triangle',0.2);
 }
 function revealMost(){
   audio();
-  if(players.length>=2){
-    const pick=players[Math.floor(Math.random()*players.length)];
-    showLoser(pick,'最多票…飲むのは');
-  } else {
-    showLoser('一番指をさされた人！','指名された人が');
-  }
+  if(players.length<2){ showLoser('一番指をさされた人！','せーので指名！'); return; }
+  const counts=players.map(p=>({name:p, n:mostVotes[p]||0}));
+  const max=Math.max(...counts.map(c=>c.n));
+  if(max===0){ showLoser('一番指をさされた人！','せーので指名！'); return; }
+  const top=counts.filter(c=>c.n===max).map(c=>c.name);
+  if(top.length===1){ showLoser(top[0], max+'票で最多！飲むのは'); }
+  else { top.forEach(recordDrink); showLoser(top.join(' と '), max+'票でタイ！飲むのは'); }
 }
 
 /* ============ WOULD YOU RATHER ============ */
