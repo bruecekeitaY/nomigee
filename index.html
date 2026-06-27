@@ -370,6 +370,15 @@ body{
 .sc-adj{width:34px;height:34px;border:none;border-radius:10px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto;background:rgba(52,232,158,.18);color:var(--green)}
 .sc-adj.minus{background:rgba(255,77,94,.18);color:#ff8a96}
 .sc-adj:active{transform:scale(.88)}
+/* ---------- How-to guide ---------- */
+#howto-list{display:flex;flex-direction:column;gap:10px}
+.howto-card{display:flex;gap:12px;background:var(--card);border-radius:14px;padding:12px 14px;animation:rise .3s both;border-left:4px solid var(--hc,#ff2e88)}
+.howto-ico{font-size:30px;flex:0 0 auto;line-height:1.2}
+.howto-body{flex:1;min-width:0}
+.howto-name{font-size:16px;font-weight:900;margin-bottom:2px}
+.howto-desc{font-size:12.5px;color:var(--dim);font-weight:600;line-height:1.45}
+.howto-drink{font-size:11.5px;font-weight:800;color:var(--gold);margin-top:5px}
+
 .set-label{font-size:15px;font-weight:800;color:var(--dim);margin:4px 2px 10px}
 .seg{display:flex;gap:8px;background:var(--card);border-radius:18px;padding:6px}
 .seg-btn{
@@ -479,9 +488,19 @@ body{
       <button class="sw" id="sw-vibe" onclick="toggleSet('vibe')"><span class="knob"></span></button>
     </div>
 
+    <button class="btn ghost" style="margin-top:18px" onclick="go('howto')">❓ 遊び方ガイドを見る</button>
     <div class="spacer"></div>
     <div class="note">設定は端末に自動保存されます。</div>
     <button class="btn ghost" onclick="go('home')">完了してホームへ</button>
+  </section>
+
+  <!-- HOW TO GUIDE -->
+  <section class="screen" id="s-howto">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">❓ 遊び方ガイド</div></div>
+    <div class="hint" style="margin-bottom:12px">全11ゲームのルールと「誰が飲むか」。<br>メンバー登録で名前が反映＆戦績がつき、負けたら罰ゲームも引けます。</div>
+    <div id="howto-list"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="go('home')">ホームへ戻る</button>
   </section>
 
   <!-- SCOREBOARD -->
@@ -794,6 +813,7 @@ function go(name){
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
   if(name==='share'){ renderShare(); }
+  if(name==='howto'){ renderHowto(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
@@ -1626,6 +1646,32 @@ async function installApp(){
   deferredInstall.prompt();
   try{ await deferredInstall.userChoice; }catch(e){}
   deferredInstall=null; renderShare();
+}
+
+/* ============ 遊び方ガイド (how-to) ============ */
+const HOWTO=[
+  {ico:'🎯',name:'ルーレット',col:'#ff2e88',desc:'メンバーで運命の輪を回す。',drink:'止まった人が飲む'},
+  {ico:'💣',name:'時限爆弾',col:'#ff8a3d',desc:'お題に答えて隣へ手渡し。制限時間はランダム。',drink:'爆発した時に持ってた人が飲む'},
+  {ico:'🍺',name:'ロシアンルーレット',col:'#7b5bff',desc:'順番にコップを選ぶ。アタリは1つ。',drink:'アタリを引いた人が飲む'},
+  {ico:'⏱️',name:'ぴったりSTOP',col:'#19c8ff',desc:'数字を見ずに10.00秒を狙ってストップ。',drink:'一番ズレた人が飲む'},
+  {ico:'🎴',name:'お題ガチャ',col:'#34e89e',desc:'真実/命令/一気/全員/MYお題をランダムに。',drink:'引いた人が実行（イヤなら一気）'},
+  {ico:'🙅',name:'私は一度も…',col:'#ff6fae',desc:'読み上げて、当てはまる人が反応。',drink:'やったことある人が飲む'},
+  {ico:'👉',name:'誰が一番…?',col:'#ff9a3d',desc:'せーので一番ヤバい人を指さす。',drink:'最多票の人が飲む'},
+  {ico:'🤔',name:'どっち派?',col:'#2de0d0',desc:'2択に分かれて手を挙げる。',drink:'少数派が飲む（同数なら全員ひと口）'},
+  {ico:'👑',name:'王様ゲーム',col:'#ffd84d',desc:'番号を配り、王様が番号を指定して命令。',drink:'指名された人が従う or 一気'},
+  {ico:'🐺',name:'ワードウルフ',col:'#7c8aa8',desc:'1人だけ違う言葉＝ウルフ。話し合って探す。',drink:'当てたらウルフ／外したら市民が飲む'},
+  {ico:'💞',name:'以心伝心',col:'#ff8fb1',desc:'2人がせーので同じ答えを狙う。',drink:'一致＝他全員／バラバラ＝2人が飲む'}
+];
+function renderHowto(){
+  const box=$('#howto-list'); if(box.children.length) return; // build once
+  HOWTO.forEach(g=>{
+    const c=document.createElement('div'); c.className='howto-card'; c.style.setProperty('--hc',g.col);
+    c.innerHTML=`<div class="howto-ico">${g.ico}</div><div class="howto-body">
+      <div class="howto-name">${escapeHtml(g.name)}</div>
+      <div class="howto-desc">${escapeHtml(g.desc)}</div>
+      <div class="howto-drink">🍺 ${escapeHtml(g.drink)}</div></div>`;
+    box.appendChild(c);
+  });
 }
 
 /* ============ おまかせ (random game picker) ============ */
