@@ -304,6 +304,20 @@ body{
 .gear:active{transform:scale(.9) rotate(40deg)}
 .gear.trophy{right:auto;left:16px}
 .gear.trophy:active{transform:scale(.9)}
+.gear.share-btn{right:66px}
+.gear.share-btn:active{transform:scale(.9)}
+
+/* ---------- Share ---------- */
+.share-ico{font-size:72px;filter:drop-shadow(0 6px 16px rgba(255,46,136,.4));animation:wob 2.4s ease-in-out infinite}
+.share-title{font-size:24px;font-weight:900}
+.url-card{
+  width:100%;max-width:360px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--card);border:1.5px solid rgba(255,255,255,.14);border-radius:16px;padding:14px 16px;cursor:pointer;
+}
+.url-card #share-url{font-size:15px;font-weight:700;color:var(--cyan);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.url-copy{font-size:13px;font-weight:800;color:var(--dim);flex:0 0 auto}
+.url-card.copied{border-color:var(--green)}
+.url-card.copied .url-copy{color:var(--green)}
 
 /* ---------- Scoreboard ---------- */
 .score-top{text-align:center;font-size:15px;font-weight:800;color:var(--gold);margin:4px 0 14px;line-height:1.4;min-height:21px}
@@ -347,6 +361,7 @@ body{
   <!-- HOME -->
   <section class="screen active" id="s-home">
     <button class="gear trophy" onclick="go('score')" aria-label="戦績">🏆</button>
+    <button class="gear share-btn" onclick="go('share')" aria-label="シェア">📤</button>
     <button class="gear" onclick="go('settings')" aria-label="設定">⚙️</button>
     <div class="hero">
       <div class="logo"><span class="emoji">🍻</span> のみゲー</div>
@@ -423,6 +438,23 @@ body{
     <div class="btn-row">
       <button class="btn ghost" onclick="go('players')">👥 メンバー編集</button>
       <button class="btn red" onclick="resetScores()">🗑️ リセット</button>
+    </div>
+  </section>
+
+  <!-- SHARE -->
+  <section class="screen" id="s-share">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">📤 みんなに配る</div></div>
+    <div class="center">
+      <div class="share-ico">🍻</div>
+      <div class="share-title">この場の全員で遊ぼう！</div>
+      <div class="hint">下のリンクを送るか、スマホをかざして読んでもらえば、その場でみんなが「のみゲー」を開けます。</div>
+      <div class="url-card" id="url-card" onclick="copyLink()">
+        <span id="share-url">…</span>
+        <span class="url-copy">📋 コピー</span>
+      </div>
+      <button class="btn big" onclick="shareApp()">📤 シェアする</button>
+      <button class="btn gold" id="install-btn" onclick="installApp()" style="display:none">📲 ホーム画面に追加</button>
+      <div class="hint" id="install-tip"></div>
     </div>
   </section>
 
@@ -638,6 +670,7 @@ function go(name){
   if(name==='king'){ resetKing(); }
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
+  if(name==='share'){ renderShare(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
@@ -1254,6 +1287,43 @@ function toggleSet(key){
   settings[key]=!settings[key]; saveSettings(); renderSettings();
   if(key==='sound'&&settings.sound){ audio(); beep(820,0.1,'triangle',0.2); }
   if(key==='vibe'&&settings.vibe) buzz(25);
+}
+
+/* ============ SHARE / INSTALL ============ */
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredInstall=e; if(current==='share') renderShare(); });
+window.addEventListener('appinstalled', ()=>{ deferredInstall=null; if(current==='share') renderShare(); });
+function shareUrl(){ return location.origin + location.pathname.replace(/index\.html$/,''); }
+function renderShare(){
+  $('#share-url').textContent = shareUrl().replace(/^https?:\/\//,'');
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ib=$('#install-btn'), tip=$('#install-tip');
+  if(standalone){ ib.style.display='none'; tip.innerHTML='✅ インストール済み！ホーム画面から起動できます。'; }
+  else if(deferredInstall){ ib.style.display=''; ib.textContent='📲 ホーム画面に追加'; tip.innerHTML='タップでアプリとしてホーム画面に追加できます。'; }
+  else if(ios){ ib.style.display='none'; tip.innerHTML='iPhoneは <b>共有ボタン → 「ホーム画面に追加」</b> でアプリ化できます。'; }
+  else { ib.style.display='none'; tip.innerHTML='ブラウザのメニューから <b>「ホーム画面に追加」</b> でアプリ化できます。'; }
+}
+async function shareApp(){
+  audio(); buzz(15);
+  const url=shareUrl();
+  const data={title:'のみゲー 🍻', text:'負けたら飲む！飲み会ゲーム「のみゲー」で遊ぼう🍻', url};
+  if(navigator.share){ try{ await navigator.share(data); }catch(e){} }
+  else copyLink();
+}
+async function copyLink(){
+  const url=shareUrl();
+  try{ await navigator.clipboard.writeText(url); }
+  catch(e){ const t=document.createElement('textarea'); t.value=url; t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t); t.select(); try{document.execCommand('copy')}catch(_){} t.remove(); }
+  const card=$('#url-card'); card.classList.add('copied'); card.querySelector('.url-copy').textContent='✅ コピー済み';
+  beep(800,0.1,'triangle',0.2); buzz(20);
+  setTimeout(()=>{ card.classList.remove('copied'); card.querySelector('.url-copy').textContent='📋 コピー'; },1800);
+}
+async function installApp(){
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  try{ await deferredInstall.userChoice; }catch(e){}
+  deferredInstall=null; renderShare();
 }
 
 /* ============ animated background bubbles ============ */
