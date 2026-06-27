@@ -573,7 +573,8 @@ body{
     <div class="score-board" id="score-board"></div>
     <div class="hint" style="text-align:center;margin-top:12px">ルーレット等で負けると自動で＋1。爆弾やロシアンの負けは ＋ で手動加算できます。</div>
     <div class="spacer"></div>
-    <div class="btn-row">
+    <button class="btn" onclick="shareScores()">📤 戦績をシェア</button>
+    <div class="btn-row" style="margin-top:12px">
       <button class="btn ghost" onclick="go('players')">👥 メンバー編集</button>
       <button class="btn red" onclick="resetScores()">🗑️ リセット</button>
     </div>
@@ -1131,6 +1132,23 @@ function adjustScore(name,d){
   save('nomigee_scores', drinkCounts); renderScore(); buzz(8); beep(d>0?640:420,0.05,'square',0.12);
 }
 function resetScores(){ drinkCounts={}; save('nomigee_scores',drinkCounts); renderScore(); buzz(20); }
+function shareScores(){
+  audio(); buzz(12);
+  const rows=players.map(p=>({name:p,n:drinkCounts[p]||0})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n);
+  let text;
+  if(!rows.length){
+    text='🍻 のみゲーで飲み会ゲーム！負けたら飲む、スマホ1台で12ゲーム。\n'+shareUrl();
+  } else {
+    const medals=['🥇','🥈','🥉'];
+    const lines=rows.map((r,i)=>`${medals[i]||'・'} ${r.name}：${r.n}回`).join('\n');
+    text=`🍻 今夜の飲まされ番付（のみゲー）\n${lines}\n\nスマホ1台で12ゲーム！→ ${shareUrl()}`;
+  }
+  if(navigator.share){ navigator.share({title:'のみゲー 今夜の戦績🍻', text}).catch(()=>{}); }
+  else {
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>showToast('📋 戦績をコピーしました！')).catch(()=>showToast('コピーできませんでした')); }
+    else showToast('この端末では共有に未対応です');
+  }
+}
 function renderScore(){
   const box=$('#score-board'); box.innerHTML='';
   const rows=players.map((p,i)=>({name:p, n:drinkCounts[p]||0, col:COLORS[i%COLORS.length]}))
@@ -1342,7 +1360,7 @@ function pickCup(i,b){
 }
 
 /* ============ STOP ============ */
-let stTarget=10, stRunning=false, stStart=0, stRaf=null, stHidden=false;
+let stTarget=10, stRunning=false, stStart=0;
 let stScores=[];
 function initStop(){
   stScores=[]; renderStopScores();
@@ -1351,12 +1369,12 @@ function initStop(){
   $('#st-btn').textContent='▶ スタート'; $('#st-btn').className='btn big green';
   $('#st-hint').innerHTML=`まずは『${escapeHtml(stopNextLabel())}』から！<br>スタート→数字が隠れる→10秒だと思ったらSTOP`;
   $('#st-judge').style.display='none';
-  stRunning=false; stHidden=false;
+  stRunning=false;
 }
 function stopMain(){
   audio();
   if(!stRunning){
-    stRunning=true; stHidden=true; stStart=performance.now();
+    stRunning=true; stStart=performance.now();
     $('#st-num').textContent='🙈'; $('#st-num').style.color='var(--dim)';
     $('#st-btn').textContent='⏹ STOP！'; $('#st-btn').className='btn big red';
     $('#st-hint').textContent='数字は見えない！カンで10.00秒を狙え';
