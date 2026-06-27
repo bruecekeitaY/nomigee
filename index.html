@@ -71,7 +71,18 @@ body{
 .tag{color:var(--dim);font-size:13px;margin-top:4px;font-weight:600}
 @keyframes pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
 
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;padding-bottom:8px}
+.omakase-btn{
+  width:100%;border:none;border-radius:18px;padding:15px;margin-top:16px;cursor:pointer;
+  font-size:18px;font-weight:900;letter-spacing:.5px;color:#3a1d00;
+  background:linear-gradient(92deg,#ffb23d,var(--gold));
+  box-shadow:0 8px 22px rgba(255,184,61,.4);transition:transform .1s,filter .2s;
+}
+.omakase-btn:active{transform:scale(.97);filter:brightness(1.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;padding-bottom:8px}
+.gcard.omakase-hl{
+  outline:3px solid var(--gold);outline-offset:2px;transform:scale(1.05);
+  box-shadow:0 0 0 4px rgba(255,216,77,.35),0 14px 32px rgba(0,0,0,.55);z-index:4;
+}
 .gcard{
   position:relative;border:none;border-radius:22px;padding:18px 14px 16px;cursor:pointer;
   color:#fff;text-align:left;overflow:hidden;min-height:138px;
@@ -396,6 +407,7 @@ body{
       <div class="logo"><span class="emoji">🍻</span> のみゲー</div>
       <div class="tag">負けたら飲む。それだけ。</div>
     </div>
+    <button class="omakase-btn" id="omakase-btn" onclick="omakase()">🎲 おまかせで1ゲーム選ぶ</button>
     <div class="grid">
       <button class="gcard c-roulette" onclick="go('roulette')">
         <div class="ico">🎯</div><div><div class="nm">ルーレット</div><div class="ds">運命の輪が回る。止まった人が飲む</div></div>
@@ -1614,6 +1626,31 @@ async function installApp(){
   deferredInstall.prompt();
   try{ await deferredInstall.userChoice; }catch(e){}
   deferredInstall=null; renderShare();
+}
+
+/* ============ おまかせ (random game picker) ============ */
+const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync'];
+let omakaseRunning=false;
+function omakase(){
+  if(omakaseRunning) return;
+  omakaseRunning=true; audio();
+  const finalName=GAMES[Math.floor(Math.random()*GAMES.length)];
+  const cards=GAMES.map(g=>document.querySelector('.c-'+g));
+  const clearHl=()=>cards.forEach(c=>c&&c.classList.remove('omakase-hl'));
+  let ticks=0; const total=20;
+  const step=()=>{
+    if(current!=='home'){ clearHl(); omakaseRunning=false; return; }
+    ticks++; clearHl();
+    const idx = ticks<total ? Math.floor(Math.random()*cards.length) : GAMES.indexOf(finalName);
+    const card=cards[idx]; if(card){ card.classList.add('omakase-hl'); }
+    beep(500+Math.random()*420,0.03,'square',0.1); buzz(5);
+    if(ticks<total){ setTimeout(step, 45+ticks*ticks*0.85); }
+    else {
+      beep(960,0.22,'triangle',0.22); buzz([20,40,40]);
+      setTimeout(()=>{ clearHl(); omakaseRunning=false; if(current==='home') go(finalName); }, 700);
+    }
+  };
+  step();
 }
 
 /* ============ animated background bubbles ============ */
