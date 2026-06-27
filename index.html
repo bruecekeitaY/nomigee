@@ -335,6 +335,19 @@ body{
 .flash-penalty.settle{animation:penaltypop .42s cubic-bezier(.2,1.5,.4,1)}
 @keyframes penaltypop{from{transform:scale(.65);opacity:.3}to{transform:scale(1);opacity:1}}
 
+/* ---------- first-visit welcome ---------- */
+.welcome{
+  position:absolute;inset:0;z-index:80;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;text-align:center;padding:calc(var(--safe-top) + 28px) 24px calc(var(--safe-bot) + 24px);overflow-y:auto;
+  background:radial-gradient(120% 80% at 50% 0%, var(--bg-top), var(--bg2) 45%, var(--bg) 100%);
+  animation:flashin .35s ease both;
+}
+.welcome.show{display:flex}
+.welcome .w-sub{color:var(--dim);font-size:14px;font-weight:700;line-height:1.5;max-width:340px}
+.welcome .w-list{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px;margin:6px 0 4px}
+.welcome .w-item{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;text-align:left;font-size:13.5px;font-weight:600;line-height:1.5}
+.welcome .w-item .e{font-size:24px;flex:0 0 auto;line-height:1.2}
+
 /* confetti */
 .confetti{position:absolute;top:-10px;width:10px;height:16px;border-radius:2px;z-index:55;pointer-events:none}
 
@@ -828,6 +841,21 @@ body{
     <button class="btn" id="flash-pen-btn" style="max-width:280px" onclick="drawPenalty()">🎲 罰ゲーム（飲む代わりでもOK）</button>
     <button class="btn gold" style="max-width:280px" onclick="hideFlash()">のんだ！もう一回 🍻</button>
     <button class="btn ghost" id="flash-tally" style="max-width:280px;display:none" onclick="hideFlash();go('score')">🏆 戦績を見る</button>
+  </div>
+
+  <!-- first-visit welcome -->
+  <div class="welcome" id="welcome">
+    <div class="logo" style="font-size:42px"><span class="emoji">🍻</span> のみゲー</div>
+    <div class="w-sub">スマホ1台で盛り上がる飲み会ゲーム集へようこそ！</div>
+    <div class="w-list">
+      <div class="w-item"><span class="e">🎮</span><span><b>12ゲーム＋おまかせ</b>を収録。負けた人が飲む、それだけ。</span></div>
+      <div class="w-item"><span class="e">👥</span><span><b>メンバーを登録</b>すると、名前がお題に登場＆<b>戦績</b>がつきます。</span></div>
+      <div class="w-item"><span class="e">🎲</span><span>飲めない人は<b>罰ゲーム</b>でもOK（モノマネ等）。みんなで安全に。</span></div>
+      <div class="w-item"><span class="e">📲</span><span><b>ホーム画面に追加</b>すれば、電波が無くてもサクサク遊べます。</span></div>
+    </div>
+    <button class="btn gold" style="max-width:300px" onclick="closeWelcome(true)">👥 メンバー登録して始める</button>
+    <button class="btn ghost" style="max-width:300px" onclick="closeWelcome(false)">今すぐ遊ぶ</button>
+    <div class="note" style="margin-top:4px">🚱 飲みすぎ注意。20歳未満は飲酒禁止です。</div>
   </div>
 
 </div>
@@ -1805,6 +1833,17 @@ function omakase(){
     s.style.setProperty('--delay',(-Math.random()*18)+'s');
     fx.appendChild(s);
   }
+})();
+
+/* ============ first-visit welcome ============ */
+function closeWelcome(toPlayers){
+  audio(); buzz(12);
+  $('#welcome').classList.remove('show');
+  save('nomigee_seen', 1);
+  if(toPlayers) go('players');
+}
+(function(){
+  if(!load('nomigee_seen', 0)){ $('#welcome').classList.add('show'); }
 })();
 
 /* unlock audio on first touch */
