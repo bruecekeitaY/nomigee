@@ -299,6 +299,13 @@ body{
 }
 #app{position:relative;z-index:1}
 
+/* ---------- reduced motion (酔い配慮 / 省電力) ---------- */
+@media (prefers-reduced-motion: reduce){
+  #bgfx{display:none}
+  .hero::before,.flash::before,.flash .drink,.share-ico,.bomb,.logo{animation:none !important}
+  .gcard,.dare-card,.wyr-card,.howto-card{animation-duration:.01ms}
+}
+
 /* ---------- result flash ---------- */
 .flash{
   position:absolute;inset:0;z-index:60;display:none;flex-direction:column;
@@ -1109,7 +1116,6 @@ function spinWheel(){
   const svg=$('#wheel');
   svg.style.transition='transform 5s cubic-bezier(.13,.86,.18,1)';
   svg.style.transform=`rotate(${wheelRot}deg)`;
-  let last=0;
   const tickInt=setInterval(()=>{ beep(800,0.03,'square',0.08); },120);
   setTimeout(()=>{ clearInterval(tickInt); },4200);
   $('#rl-hint').textContent='🌀 回転中…';
@@ -1129,7 +1135,7 @@ const BOMB_TASKS=[
   '色の名前を1つ','スポーツを1つ言って','人差し指で鼻にタッチ','{p}の好きな所を1つ','元気よく自己紹介',
   '{p}にひとこと感謝を','{p}のあだ名を考えて'
 ];
-let bombTimer=null, bombTick=null, bombRunning=false;
+let bombTick=null, bombRunning=false;
 function resetBombUI(){
   $('#bomb-emoji').className='bomb'; $('#bomb-emoji').textContent='💣';
   $('#bomb-task').innerHTML='スタートを押すと爆弾に火がつく。<br>お題に答えたら隣の人へ手渡し！';
@@ -1174,7 +1180,6 @@ function boom(){
 function stopBomb(){
   bombRunning=false;
   if(bombTick){ clearTimeout(bombTick); bombTick=null; }
-  if(bombTimer){ clearTimeout(bombTimer); bombTimer=null; }
 }
 
 /* ============ RUSSIAN ============ */
@@ -1221,7 +1226,7 @@ function initStop(){
   stTarget=10; $('#st-target').textContent='10.00';
   $('#st-num').textContent='0.00'; $('#st-num').style.color='';
   $('#st-btn').textContent='▶ スタート'; $('#st-btn').className='btn big green';
-  $('#st-hint').textContent='スタート→数字が隠れる→10秒だと思ったらSTOP！';
+  $('#st-hint').innerHTML=`まずは『${escapeHtml(stopNextLabel())}』から！<br>スタート→数字が隠れる→10秒だと思ったらSTOP`;
   $('#st-judge').style.display='none';
   stRunning=false; stHidden=false;
 }
@@ -1238,18 +1243,18 @@ function stopMain(){
     const diff=Math.abs(t-stTarget);
     $('#st-num').textContent=t.toFixed(2);
     $('#st-num').style.color = diff<0.2?'var(--green)':diff<0.6?'var(--gold)':'var(--red)';
-    $('#st-btn').textContent='▶ 次の人';
+    $('#st-btn').textContent='▶ 次の人へ';
     $('#st-btn').className='btn big green';
-    const nm = prompt? null : null;
-    const label = players[stScores.length] || ('Player'+(stScores.length+1));
+    const label = stopNextLabel();
     stScores.push({name:label, time:t, diff});
-    $('#st-hint').textContent = `${label}: ${t.toFixed(2)}秒（ズレ ${diff.toFixed(2)}）`;
+    const next=stopNextLabel();
+    $('#st-hint').innerHTML = `${escapeHtml(label)}：<b>${t.toFixed(2)}秒</b>（ズレ ${diff.toFixed(2)}）<br>次は『${escapeHtml(next)}』の番`;
     beep(diff<0.2?1000:500,0.12,'triangle',0.2); buzz(diff<0.2?[20,40,20]:20);
     renderStopScores();
-    if(stScores.length>=Math.max(2,players.length)){ $('#st-judge').style.display=''; }
-    else $('#st-judge').style.display='';
+    $('#st-judge').style.display = stScores.length>=2 ? '' : 'none';
   }
 }
+function stopNextLabel(){ return players[stScores.length] || ('プレイヤー'+(stScores.length+1)); }
 function renderStopScores(){
   const box=$('#st-scores'); box.innerHTML='';
   let worst=-1,wi=-1; stScores.forEach((s,i)=>{ if(s.diff>worst){worst=s.diff;wi=i;} });
