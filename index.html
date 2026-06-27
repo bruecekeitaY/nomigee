@@ -656,9 +656,14 @@ body{
   <section class="screen" id="s-russian">
     <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🍺 ロシアンルーレット</div></div>
     <div class="center">
+      <div class="seg" id="ru-seg" style="max-width:280px">
+        <button class="seg-btn" data-rc="4" onclick="setRuCount(4)">4<span>個</span></button>
+        <button class="seg-btn" data-rc="6" onclick="setRuCount(6)">6<span>個</span></button>
+        <button class="seg-btn" data-rc="9" onclick="setRuCount(9)">9<span>個</span></button>
+      </div>
       <div class="hint" id="ru-hint">どれか1つがアタリ。順番にコップを選べ！</div>
       <div class="cup-grid" id="cup-grid"></div>
-      <button class="btn ghost" id="ru-reset" onclick="resetRussian()">新しいゲーム / 個数変更</button>
+      <button class="btn ghost" id="ru-reset" onclick="newRussianGame()">🔄 もう一回（新しいアタリ）</button>
     </div>
   </section>
 
@@ -1304,14 +1309,13 @@ function stopBomb(){
 
 /* ============ RUSSIAN ============ */
 let ruCount=load('nomigee_rucount',6), ruBomb=-1, ruOver=false, ruPicks=0;
-function ensureRussian(){ if(!$('#cup-grid').children.length || ruOver) resetRussian(); }
-function resetRussian(){
-  // simple count chooser cycle 4->6->9->4
-  if($('#cup-grid').children.length){ ruCount = ruCount===4?6: ruCount===6?9:4; save('nomigee_rucount',ruCount); }
+function ensureRussian(){ renderRuSeg(); if(!$('#cup-grid').children.length || ruOver) newRussianGame(); }
+function renderRuSeg(){ document.querySelectorAll('#ru-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.rc===ruCount)); }
+function setRuCount(n){ ruCount=n; save('nomigee_rucount',ruCount); renderRuSeg(); newRussianGame(); audio(); beep(520,0.05,'square',0.12); buzz(8); }
+function newRussianGame(){
   ruBomb=Math.floor(Math.random()*ruCount); ruOver=false; ruPicks=0;
   const grid=$('#cup-grid');
-  const cols = ruCount<=4?2:3;
-  grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  grid.style.gridTemplateColumns=`repeat(${ruCount<=4?2:3},1fr)`;
   grid.innerHTML='';
   for(let i=0;i<ruCount;i++){
     const b=document.createElement('button'); b.className='cup'; b.textContent='🍺'; b.dataset.i=i;
@@ -1319,7 +1323,6 @@ function resetRussian(){
     grid.appendChild(b);
   }
   $('#ru-hint').textContent=`${ruCount}個のうち1個がアタリ。順番に選べ！`;
-  $('#ru-reset').textContent='新しいゲーム / 個数変更 (今:'+ruCount+')';
 }
 function pickCup(i,b){
   if(ruOver||b.disabled) return;
