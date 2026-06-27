@@ -120,6 +120,7 @@ body{
 .c-king{background:linear-gradient(140deg,#ffd84d,#7b2ff7)}
 .c-wolf{background:linear-gradient(140deg,#7c8aa8,#2e3a5e)}
 .c-sync{background:linear-gradient(140deg,#ff8fb1,#d6336c)}
+.c-rush{background:linear-gradient(140deg,#ffd93d,#ff3d81)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- Buttons ---------- */
@@ -270,6 +271,8 @@ body{
 .d-wolf .dare-text{color:#fff}
 .d-sync{background:linear-gradient(150deg,#ff8fb1,#c1255f)}
 .d-sync .dare-text{color:#fff}
+.d-rush{background:linear-gradient(150deg,#ffb03d,#ff3d81)}
+.d-rush .dare-text{color:#fff}
 #sync-ico.counting{animation:countpop .4s cubic-bezier(.2,1.5,.4,1)}
 @keyframes countpop{from{transform:scale(.4);opacity:.3}to{transform:scale(1);opacity:1}}
 .wolf-ring{
@@ -450,6 +453,9 @@ body{
       </button>
       <button class="gcard c-sync" onclick="go('sync')">
         <div class="ico">💞</div><div><div class="nm">以心伝心</div><div class="ds">2人がせーので一致するか勝負</div></div>
+      </button>
+      <button class="gcard c-rush" onclick="go('rush')">
+        <div class="ico">⚡</div><div><div class="nm">お題ラッシュ</div><div class="ds">30秒で◯個言え！言えなきゃ飲む</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
@@ -779,6 +785,33 @@ body{
     </div>
   </section>
 
+  <!-- お題ラッシュ -->
+  <section class="screen" id="s-rush">
+    <div class="topbar"><button class="back" onclick="stopRush();go('home')">‹</button><div class="title-sm">⚡ お題ラッシュ</div></div>
+    <div class="center">
+      <!-- idle -->
+      <div id="rush-idle">
+        <div style="font-size:60px;margin-bottom:6px">⚡</div>
+        <div class="dare-card d-rush" id="rush-card" style="min-height:auto;padding:20px">
+          <div class="dare-text" id="rush-cat" style="font-size:20px">ボタンでお題を引こう！</div>
+        </div>
+        <button class="btn big gold" style="margin-top:16px" onclick="drawRush()">⚡ お題を引く</button>
+        <div class="hint">指名された人が<b>30秒</b>でお題を指定数だけ言えるか挑戦！<br>言えなかったら（or 時間切れ）その人が飲む。</div>
+      </div>
+      <!-- playing -->
+      <div id="rush-play" style="display:none">
+        <div class="wolf-ring" id="rush-ring"><span id="rush-time">0:30</span></div>
+        <div class="dare-card d-rush" id="rush-play-card" style="min-height:auto;padding:18px">
+          <div class="dare-text" id="rush-play-text">お題</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn green" onclick="rushDone(true)">✅ 言えた！</button>
+          <button class="btn red" onclick="rushDone(false)">🍺 ギブ（飲む）</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -810,6 +843,7 @@ function go(name){
   if(name==='king'){ resetKing(); }
   if(name==='wolf'){ resetWolf(); }
   if(name==='sync'){ resetSync(); }
+  if(name==='rush'){ resetRush(); }
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
   if(name==='share'){ renderShare(); }
@@ -818,6 +852,7 @@ function go(name){
   if(current==='bomb' && name!=='bomb') stopBomb();
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
   if(current==='sync' && name!=='sync') stopSync();
+  if(current==='rush' && name!=='rush') stopRush();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
   current = name;
@@ -1591,6 +1626,57 @@ function syncResult(match){
   $('#sync-judge').style.display='none';
 }
 
+/* ============ お題ラッシュ (30秒チャレンジ) ============ */
+const RUSH=[
+  {c:'コンビニの商品',n:5},{c:'赤いもの',n:5},{c:'都道府県',n:7},{c:'寿司ネタ',n:6},{c:'アニメのタイトル',n:5},
+  {c:'動物',n:8},{c:'スポーツ',n:6},{c:'果物',n:6},{c:'カラオケの定番曲',n:4},{c:'お笑い芸人',n:5},
+  {c:'ラーメンの種類',n:4},{c:'飲み物',n:7},{c:'映画のタイトル',n:5},{c:'野菜',n:7},{c:'国の名前',n:7},
+  {c:'ディズニー作品',n:4},{c:'お菓子',n:6},{c:'魚の名前',n:5},{c:'花の名前',n:5},{c:'家電製品',n:6},
+  {c:'パンの種類',n:5},{c:'四字熟語',n:3},{c:'コンビニチェーン',n:3},{c:'温泉地',n:4},{c:'丼ものメニュー',n:4},
+  {c:'アイスの商品名',n:4},{c:'プロ野球チーム',n:4},{c:'歴史上の人物',n:5},{c:'楽器',n:5},{c:'お酒の種類',n:5}
+];
+let rushTimer=null, rushRemain=30, rushChallenger='';
+function resetRush(){
+  stopRush();
+  $('#rush-idle').style.display=''; $('#rush-play').style.display='none';
+  $('#rush-cat').textContent='ボタンでお題を引こう！';
+}
+function stopRush(){ if(rushTimer){ clearInterval(rushTimer); rushTimer=null; } }
+function drawRush(){
+  audio(); buzz(15); stopRush();
+  const r=RUSH[Math.floor(Math.random()*RUSH.length)];
+  rushChallenger=pickNames(1)[0];
+  $('#rush-idle').style.display='none'; $('#rush-play').style.display='';
+  $('#rush-play-text').innerHTML=`<b>${escapeHtml(rushChallenger)}</b> さん！<br>「${escapeHtml(r.c)}」を <b>${r.n}個</b> 言え！`;
+  rushRemain=30; updateRushRing(); startRush();
+}
+function startRush(){
+  stopRush();
+  rushTimer=setInterval(()=>{
+    rushRemain--; updateRushRing();
+    if(rushRemain<=0){ stopRush(); rushDone(false,true); }
+    else if(rushRemain<=5){ beep(900,0.06,'square',0.14); buzz(8); }
+  },1000);
+}
+function updateRushRing(){
+  const t=Math.max(0,rushRemain);
+  $('#rush-time').textContent='0:'+String(t).padStart(2,'0');
+  const ring=$('#rush-ring');
+  ring.style.setProperty('--p', t/30*100);
+  ring.style.setProperty('--ring', rushRemain<=5?'#ff4d5e':rushRemain<=12?'#ffd84d':'#19e3ff');
+}
+function rushDone(success, timeout){
+  stopRush();
+  if(success){
+    beep(900,0.15,'triangle',0.22); buzz([20,40,20]); confetti();
+    $('#rush-play-text').innerHTML='✅ セーフ！お見事！🎉';
+    setTimeout(()=>{ if(current==='rush') resetRush(); }, 1300);
+  } else {
+    showLoser(rushChallenger, timeout?'時間切れ…飲むのは':'ギブアップ！飲むのは');
+    resetRush();
+  }
+}
+
 /* ============ SETTINGS UI ============ */
 function renderSettings(){
   document.querySelectorAll('#theme-seg .seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.theme===(settings.theme||'neon')));
@@ -1660,7 +1746,8 @@ const HOWTO=[
   {ico:'🤔',name:'どっち派?',col:'#2de0d0',desc:'2択に分かれて手を挙げる。',drink:'少数派が飲む（同数なら全員ひと口）'},
   {ico:'👑',name:'王様ゲーム',col:'#ffd84d',desc:'番号を配り、王様が番号を指定して命令。',drink:'指名された人が従う or 一気'},
   {ico:'🐺',name:'ワードウルフ',col:'#7c8aa8',desc:'1人だけ違う言葉＝ウルフ。話し合って探す。',drink:'当てたらウルフ／外したら市民が飲む'},
-  {ico:'💞',name:'以心伝心',col:'#ff8fb1',desc:'2人がせーので同じ答えを狙う。',drink:'一致＝他全員／バラバラ＝2人が飲む'}
+  {ico:'💞',name:'以心伝心',col:'#ff8fb1',desc:'2人がせーので同じ答えを狙う。',drink:'一致＝他全員／バラバラ＝2人が飲む'},
+  {ico:'⚡',name:'お題ラッシュ',col:'#ff3d81',desc:'指名された人が30秒でお題を指定数言えるか挑戦。',drink:'言えなかった人が飲む'}
 ];
 function renderHowto(){
   const box=$('#howto-list'); if(box.children.length) return; // build once
@@ -1675,7 +1762,7 @@ function renderHowto(){
 }
 
 /* ============ おまかせ (random game picker) ============ */
-const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync'];
+const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync','rush'];
 let omakaseRunning=false;
 function omakase(){
   if(omakaseRunning) return;
