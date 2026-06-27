@@ -310,6 +310,7 @@ body{
   100%{transform:translateY(-120vh) scale(1.1);opacity:0}
 }
 #app{position:relative;z-index:1}
+#bgfx.paused span{animation-play-state:paused}
 
 /* ---------- reduced motion (酔い配慮 / 省電力) ---------- */
 @media (prefers-reduced-motion: reduce){
@@ -415,6 +416,14 @@ body{
 .sc-adj{width:34px;height:34px;border:none;border-radius:10px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto;background:rgba(52,232,158,.18);color:var(--green)}
 .sc-adj.minus{background:rgba(255,77,94,.18);color:#ff8a96}
 .sc-adj:active{transform:scale(.88)}
+/* ---------- team split ---------- */
+#team-result{display:flex;flex-direction:column;gap:12px}
+.team-card{border-radius:16px;padding:14px;border-left:5px solid var(--tc,#ff4d5e);background:var(--card);animation:rise .3s both}
+.team-head{font-size:16px;font-weight:900;margin-bottom:8px;color:var(--tc,#fff)}
+.team-members{display:flex;flex-wrap:wrap;gap:7px}
+.team-mem{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border-radius:11px;padding:6px 11px;font-size:14px;font-weight:800}
+.team-mem .tm-dot{width:9px;height:9px;border-radius:50%;background:var(--tc,#ff4d5e)}
+
 /* ---------- vote chips (Most Likely To) ---------- */
 .vote-panel{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:380px;margin:2px 0}
 .vote-chip{display:flex;align-items:center;gap:8px;border:2px solid var(--vc,#ff2e88);background:rgba(255,255,255,.06);color:#fff;border-radius:14px;padding:9px 12px;font-size:15px;font-weight:800;cursor:pointer;transition:transform .1s}
@@ -597,8 +606,24 @@ body{
     </div>
     <div class="pl-list" id="pl-list"></div>
     <div class="hint" id="pl-hint"></div>
+    <button class="btn ghost" style="margin-top:14px" onclick="go('teams')">🎲 チーム分けする</button>
     <div class="spacer"></div>
     <button class="btn ghost" onclick="go('home')">完了してホームへ</button>
+  </section>
+
+  <!-- TEAMS -->
+  <section class="screen" id="s-teams">
+    <div class="topbar"><button class="back" onclick="go('players')">‹</button><div class="title-sm">🎲 チーム分け</div></div>
+    <div class="set-label" style="margin:2px 2px 8px">チーム数</div>
+    <div class="seg" id="team-seg">
+      <button class="seg-btn" data-tc="2" onclick="setTeamCount(2)">2<span>チーム</span></button>
+      <button class="seg-btn" data-tc="3" onclick="setTeamCount(3)">3<span>チーム</span></button>
+      <button class="seg-btn" data-tc="4" onclick="setTeamCount(4)">4<span>チーム</span></button>
+    </div>
+    <button class="btn" style="margin-top:14px" onclick="shuffleTeams()">🎲 シャッフル！</button>
+    <div id="team-result" style="margin-top:14px"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="go('players')">メンバー編集へ</button>
   </section>
 
   <!-- ROULETTE -->
@@ -919,6 +944,7 @@ function go(name){
   if(name==='share'){ renderShare(); }
   if(name==='howto'){ renderHowto(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
+  if(name==='teams'){ resetTeams(); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
   if(current==='sync' && name!=='sync') stopSync();
@@ -1935,6 +1961,38 @@ function omakase(){
   step();
 }
 
+/* ============ チーム分け (team split) ============ */
+let teamCount=2;
+const TEAM_META=[{nm:'🔴 レッド',c:'#ff4d5e'},{nm:'🔵 ブルー',c:'#2a6cf0'},{nm:'🟢 グリーン',c:'#34e89e'},{nm:'🟡 イエロー',c:'#ffd84d'}];
+function resetTeams(){
+  document.querySelectorAll('#team-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.tc===teamCount));
+  $('#team-result').innerHTML='';
+}
+function setTeamCount(n){ teamCount=n; resetTeams(); audio(); beep(520,0.05,'square',0.12); buzz(8); if(players.length>=2) shuffleTeams(); }
+function shuffleTeams(){
+  audio(); buzz(15);
+  const box=$('#team-result');
+  const pool=players.filter(p=>p&&p.trim());
+  if(pool.length<2){ box.innerHTML='<div class="hint" style="text-align:center">メンバーを2人以上登録してね（メンバー編集へ）。</div>'; return; }
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const teams=Array.from({length:teamCount},()=>[]);
+  pool.forEach((p,i)=>teams[i%teamCount].push(p));
+  box.innerHTML='';
+  teams.forEach((mem,i)=>{
+    if(!mem.length) return;
+    const m=TEAM_META[i];
+    const card=document.createElement('div'); card.className='team-card'; card.style.setProperty('--tc',m.c);
+    card.innerHTML=`<div class="team-head">${m.nm}（${mem.length}人）</div><div class="team-members">${mem.map(p=>`<span class="team-mem"><span class="tm-dot"></span>${escapeHtml(p)}</span>`).join('')}</div>`;
+    box.appendChild(card);
+  });
+  beep(800,0.12,'triangle',0.2); confetti();
+}
+
+/* ============ 省電力: タブ非表示で背景アニメ停止 ============ */
+document.addEventListener('visibilitychange', ()=>{
+  const fx=document.getElementById('bgfx'); if(fx) fx.classList.toggle('paused', document.hidden);
+});
+
 /* ============ animated background bubbles ============ */
 (function(){
   const fx=document.getElementById('bgfx'); if(!fx) return;
@@ -1959,7 +2017,7 @@ function closeWelcome(toPlayers){
   if(toPlayers) go('players');
 }
 /* ============ deep-link (?g=game) + アプリショートカット ============ */
-const DEEP_TARGETS=new Set([...GAMES,'home','score','howto','share','players','settings']);
+const DEEP_TARGETS=new Set([...GAMES,'home','score','howto','share','players','settings','teams']);
 let deepLinked=false;
 (function(){
   try{
