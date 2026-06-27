@@ -103,6 +103,7 @@ body{
 .c-most{background:linear-gradient(140deg,#ff9a3d,#ff3d77)}
 .c-would{background:linear-gradient(140deg,#2de0d0,#2a6cf0)}
 .c-king{background:linear-gradient(140deg,#ffd84d,#7b2ff7)}
+.c-wolf{background:linear-gradient(140deg,#7c8aa8,#2e3a5e)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- Buttons ---------- */
@@ -249,6 +250,15 @@ body{
 .king-lot.king .king-lot-face{color:#3a1d00}
 .d-king{background:linear-gradient(150deg,#ffd84d,#7b2ff7)}
 .d-king .dare-text{color:#fff}
+.d-wolf{background:linear-gradient(150deg,#5a6a9a,#262e4e)}
+.d-wolf .dare-text{color:#fff}
+.wolf-ring{
+  width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;
+  background:conic-gradient(var(--ring,#19e3ff) calc(var(--p,100)*1%), rgba(255,255,255,.1) 0);
+  transition:background .3s linear;
+}
+.wolf-ring::before{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--bg2)}
+.wolf-ring span{position:relative;z-index:1;font-size:40px;font-weight:900;font-variant-numeric:tabular-nums}
 
 /* ---------- animated background (party bubbles) ---------- */
 #bgfx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
@@ -394,6 +404,9 @@ body{
       </button>
       <button class="gcard c-king" onclick="go('king')">
         <div class="ico">👑</div><div><div class="nm">王様ゲーム</div><div class="ds">番号を配って王様が命令。定番の宴会芸</div></div>
+      </button>
+      <button class="gcard c-wolf" onclick="go('wolf')">
+        <div class="ico">🐺</div><div><div class="nm">ワードウルフ</div><div class="ds">1人だけ違う言葉。少数派を探せ</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
@@ -641,6 +654,51 @@ body{
     </div>
   </section>
 
+  <!-- WORD WOLF -->
+  <section class="screen" id="s-wolf">
+    <div class="topbar"><button class="back" onclick="stopWolfTimer();go('home')">‹</button><div class="title-sm">🐺 ワードウルフ</div></div>
+    <div class="center" id="wolf-stage">
+      <!-- setup -->
+      <div id="wolf-setup">
+        <div style="font-size:64px;margin-bottom:6px">🐺</div>
+        <div class="hint" style="margin-bottom:14px">全員にお題（言葉）を配ります。<b>1人だけ違う言葉＝ウルフ</b>。<br>話し合ってウルフを探せ！</div>
+        <div class="stepper">
+          <button class="step-btn" onclick="wolfStep(-1)">−</button>
+          <div class="step-val"><span id="wolf-n">4</span> 人</div>
+          <button class="step-btn" onclick="wolfStep(1)">＋</button>
+        </div>
+        <button class="btn big gold" style="margin-top:18px" onclick="wolfDeal()">🎴 言葉を配る</button>
+      </div>
+      <!-- dealing -->
+      <div id="wolf-deal" style="display:none">
+        <div class="hint" id="wolf-deal-hint">1人目さん、タップして自分の言葉を見る</div>
+        <div class="king-lot" id="wolf-lot" onclick="wolfLotTap()">
+          <div class="king-lot-face" id="wolf-lot-face">👆 タップ</div>
+        </div>
+        <button class="btn big" id="wolf-deal-btn" onclick="wolfLotTap()">めくる</button>
+      </div>
+      <!-- discussion -->
+      <div id="wolf-discuss" style="display:none">
+        <div class="wolf-ring" id="wolf-ring"><span id="wolf-time">3:00</span></div>
+        <div class="hint">自分の言葉を直接は言わずに話し合い！<br><b>1人だけ違う言葉を持つウルフ</b>を見つけよう。せーので指さして投票→発表。</div>
+        <div class="btn-row">
+          <button class="btn ghost" id="wolf-timer-btn" onclick="toggleWolfTimer()">⏸ 一時停止</button>
+          <button class="btn gold" onclick="wolfReveal()">🗳️ 投票して発表</button>
+        </div>
+      </div>
+      <!-- reveal -->
+      <div id="wolf-result" style="display:none">
+        <div class="dare-card d-wolf" id="wolf-result-card">
+          <div class="dare-type">WORD WOLF</div>
+          <div class="dare-ico">🐺</div>
+          <div class="dare-text" id="wolf-result-text">ウルフは…</div>
+        </div>
+        <button class="btn big gold" onclick="wolfDeal()">🔄 もう一回</button>
+        <div class="hint">ウルフを当てたら→<b>ウルフが一気</b>／外したら→<b>市民が飲む</b>！</div>
+      </div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -668,11 +726,13 @@ function go(name){
   if(name==='most'){ resetMost(); }
   if(name==='would'){ resetWould(); }
   if(name==='king'){ resetKing(); }
+  if(name==='wolf'){ resetWolf(); }
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
   if(name==='share'){ renderShare(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(current==='bomb' && name!=='bomb') stopBomb();
+  if(current==='wolf' && name!=='wolf') stopWolfTimer();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
   current = name;
@@ -1268,6 +1328,88 @@ function kingReroll(){
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   $('#king-order-text').textContent=kingPickOrder();
   beep(720,0.1,'triangle',0.2); buzz(15);
+}
+
+/* ============ WORD WOLF (ワードウルフ) ============ */
+const WOLF_PAIRS=[
+  ['ラーメン','うどん'],['コーラ','サイダー'],['犬','猫'],['海','プール'],['寿司','刺身'],['カレー','シチュー'],
+  ['映画館','劇場'],['雪','雨'],['電車','バス'],['コーヒー','紅茶'],['サッカー','フットサル'],['温泉','銭湯'],
+  ['漫画','アニメ'],['朝','夜'],['ケーキ','プリン'],['ギター','ピアノ'],['財布','カバン'],['スマホ','タブレット'],
+  ['焼肉','ステーキ'],['新幹線','飛行機'],['桜','梅'],['図書館','本屋'],['ビール','ワイン'],['公園','広場'],
+  ['枕','布団'],['傘','長靴'],['納豆','豆腐'],['遊園地','動物園'],['夏祭り','花火大会'],['先輩','上司']
+];
+let wolfN=4, wolfWords=[], wolfDealIdx=0, wolfRevealed=false, wolfWolfIdx=0, wolfCWord='', wolfWWord='', wolfTimer=null, wolfRemain=180, wolfPaused=false;
+function resetWolf(){
+  stopWolfTimer();
+  wolfN=Math.min(12,Math.max(3, players.length||4));
+  $('#wolf-n').textContent=wolfN;
+  $('#wolf-setup').style.display=''; $('#wolf-deal').style.display='none'; $('#wolf-discuss').style.display='none'; $('#wolf-result').style.display='none';
+}
+function wolfStep(d){ wolfN=Math.min(12,Math.max(3,wolfN+d)); $('#wolf-n').textContent=wolfN; buzz(10); beep(520,0.04,'square',0.1); }
+function wolfDeal(){
+  audio(); stopWolfTimer();
+  const pair=WOLF_PAIRS[Math.floor(Math.random()*WOLF_PAIRS.length)];
+  const swap=Math.random()<0.5;
+  wolfCWord=swap?pair[1]:pair[0]; wolfWWord=swap?pair[0]:pair[1];
+  wolfWolfIdx=Math.floor(Math.random()*wolfN);
+  wolfWords=[]; for(let i=0;i<wolfN;i++) wolfWords.push(i===wolfWolfIdx?wolfWWord:wolfCWord);
+  wolfDealIdx=0; wolfRevealed=false;
+  $('#wolf-setup').style.display='none'; $('#wolf-result').style.display='none'; $('#wolf-discuss').style.display='none';
+  $('#wolf-deal').style.display='';
+  wolfPrepFace();
+}
+function wolfPrepFace(){
+  $('#wolf-lot').className='king-lot';
+  $('#wolf-lot-face').innerHTML='👆 タップ';
+  $('#wolf-deal-btn').textContent='めくる';
+  $('#wolf-deal-hint').innerHTML=(wolfDealIdx+1)+'人目さん、タップして自分の言葉を見る';
+}
+function wolfLotTap(){
+  audio();
+  if(!wolfRevealed){
+    // 全員 同じ見た目で表示（色などでウルフがバレないように）
+    $('#wolf-lot').className='king-lot revealed';
+    $('#wolf-lot-face').innerHTML='<span style="font-size:.5em;opacity:.85">あなたの言葉</span><br>'+escapeHtml(wolfWords[wolfDealIdx]);
+    wolfRevealed=true;
+    $('#wolf-deal-btn').textContent='🙈 隠して次の人へ';
+    $('#wolf-deal-hint').textContent='覚えたら隠して次の人へ回す';
+    buzz(15); beep(650,0.1,'triangle',0.2);
+  } else {
+    wolfRevealed=false; wolfDealIdx++;
+    if(wolfDealIdx>=wolfN) wolfStartDiscuss();
+    else { wolfPrepFace(); buzz(8); }
+  }
+}
+function wolfStartDiscuss(){
+  $('#wolf-deal').style.display='none';
+  $('#wolf-discuss').style.display='';
+  wolfRemain=180; wolfPaused=false; updateWolfRing(); startWolfTimer();
+}
+function startWolfTimer(){
+  stopWolfTimer(); $('#wolf-timer-btn').textContent='⏸ 一時停止';
+  wolfTimer=setInterval(()=>{
+    if(wolfPaused) return;
+    wolfRemain--; updateWolfRing();
+    if(wolfRemain<=0){ stopWolfTimer(); beep(300,0.4,'sawtooth',0.3); buzz([100,60,200]); }
+    else if(wolfRemain<=10){ beep(900,0.05,'square',0.12); }
+  },1000);
+}
+function stopWolfTimer(){ if(wolfTimer){ clearInterval(wolfTimer); wolfTimer=null; } }
+function toggleWolfTimer(){ wolfPaused=!wolfPaused; $('#wolf-timer-btn').textContent=wolfPaused?'▶ 再開':'⏸ 一時停止'; buzz(10); }
+function updateWolfRing(){
+  const r=$('#wolf-ring'), t=Math.max(0,wolfRemain);
+  $('#wolf-time').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
+  r.style.setProperty('--p', t/180*100);
+  r.style.setProperty('--ring', wolfRemain<=10?'#ff4d5e':wolfRemain<=30?'#ffd84d':'#19e3ff');
+}
+function wolfReveal(){
+  audio(); stopWolfTimer();
+  $('#wolf-discuss').style.display='none';
+  $('#wolf-result').style.display='';
+  const card=$('#wolf-result-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  $('#wolf-result-text').innerHTML='🐺 ウルフは <b>'+(wolfWolfIdx+1)+'番</b> の人！<br><span style="font-size:.62em">市民「'+escapeHtml(wolfCWord)+'」／ウルフ「'+escapeHtml(wolfWWord)+'」</span>';
+  fanfare(); confetti();
 }
 
 /* ============ SETTINGS UI ============ */
