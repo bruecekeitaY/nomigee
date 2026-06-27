@@ -16,5 +16,28 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "おまかせで遊ぶ",
+      "short_name": "おまかせ",
+      "description": "ランダムで1ゲーム選んで開始",
+      "url": "./index.html?g=omakase",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "ルーレット",
+      "short_name": "ルーレット",
+      "description": "運命の輪を回す",
+      "url": "./index.html?g=roulette",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "今夜の戦績",
+      "short_name": "戦績",
+      "description": "負け回数ランキング",
+      "url": "./index.html?g=score",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
   ]
 }

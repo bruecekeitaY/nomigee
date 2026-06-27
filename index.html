@@ -22,6 +22,8 @@
 :root[data-theme="ocean"]{ --bg:#03101c; --bg2:#06283a; --bg-top:#0a5566; --card:#0c2436; --card2:#123347; --neon:#19e3ff; --neon2:#2a6cf0; --cyan:#34e8c0; --dim:#9ac7e6; }
 :root[data-theme="bar"]{ --bg:#0a0806; --bg2:#191309; --bg-top:#33260f; --card:#1c1610; --card2:#271f14; --neon:#ffb23d; --neon2:#e0892a; --cyan:#ffd84d; --gold:#ffe08a; --dim:#d8c39a; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+:focus{outline:none}
+button:focus-visible,.gcard:focus-visible,input:focus-visible,[onclick]:focus-visible{outline:3px solid var(--cyan);outline-offset:2px;border-radius:12px}
 html,body{height:100%}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;
@@ -1956,9 +1958,24 @@ function closeWelcome(toPlayers){
   save('nomigee_seen', 1);
   if(toPlayers) go('players');
 }
+/* ============ deep-link (?g=game) + アプリショートカット ============ */
+const DEEP_TARGETS=new Set([...GAMES,'home','score','howto','share','players','settings']);
+let deepLinked=false;
 (function(){
-  if(!load('nomigee_seen', 0)){ $('#welcome').classList.add('show'); }
+  try{
+    const g=new URLSearchParams(location.search).get('g');
+    if(g==='omakase'){ deepLinked=true; go('home'); setTimeout(omakase,400); }
+    else if(g && DEEP_TARGETS.has(g)){ deepLinked=true; go(g); }
+  }catch(e){}
 })();
+
+/* ============ first-visit welcome ============ */
+(function(){
+  if(!deepLinked && !load('nomigee_seen', 0)){ $('#welcome').classList.add('show'); }
+})();
+
+/* ============ a11y: アイコンボタンにラベル ============ */
+document.querySelectorAll('.back').forEach(b=>{ if(!b.getAttribute('aria-label')) b.setAttribute('aria-label','戻る'); });
 
 /* ============ press ripple ============ */
 document.addEventListener('pointerdown', e=>{
