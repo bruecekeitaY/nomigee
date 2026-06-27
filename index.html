@@ -104,6 +104,7 @@ body{
 .c-would{background:linear-gradient(140deg,#2de0d0,#2a6cf0)}
 .c-king{background:linear-gradient(140deg,#ffd84d,#7b2ff7)}
 .c-wolf{background:linear-gradient(140deg,#7c8aa8,#2e3a5e)}
+.c-sync{background:linear-gradient(140deg,#ff8fb1,#d6336c)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- Buttons ---------- */
@@ -252,6 +253,10 @@ body{
 .d-king .dare-text{color:#fff}
 .d-wolf{background:linear-gradient(150deg,#5a6a9a,#262e4e)}
 .d-wolf .dare-text{color:#fff}
+.d-sync{background:linear-gradient(150deg,#ff8fb1,#c1255f)}
+.d-sync .dare-text{color:#fff}
+#sync-ico.counting{animation:countpop .4s cubic-bezier(.2,1.5,.4,1)}
+@keyframes countpop{from{transform:scale(.4);opacity:.3}to{transform:scale(1);opacity:1}}
 .wolf-ring{
   width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;
   background:conic-gradient(var(--ring,#19e3ff) calc(var(--p,100)*1%), rgba(255,255,255,.1) 0);
@@ -407,6 +412,9 @@ body{
       </button>
       <button class="gcard c-wolf" onclick="go('wolf')">
         <div class="ico">🐺</div><div><div class="nm">ワードウルフ</div><div class="ds">1人だけ違う言葉。少数派を探せ</div></div>
+      </button>
+      <button class="gcard c-sync" onclick="go('sync')">
+        <div class="ico">💞</div><div><div class="nm">以心伝心</div><div class="ds">2人がせーので一致するか勝負</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
@@ -699,6 +707,24 @@ body{
     </div>
   </section>
 
+  <!-- 以心伝心 -->
+  <section class="screen" id="s-sync">
+    <div class="topbar"><button class="back" onclick="stopSync();go('home')">‹</button><div class="title-sm">💞 以心伝心</div></div>
+    <div class="center">
+      <div class="dare-card d-sync" id="sync-card">
+        <div class="dare-type">ESP ・ 以心伝心</div>
+        <div class="dare-ico" id="sync-ico">💞</div>
+        <div class="dare-text" id="sync-text">2人を選んでお題を引こう！</div>
+      </div>
+      <div class="btn-row" id="sync-judge" style="display:none">
+        <button class="btn gold" onclick="syncResult(true)">✅ 一致！</button>
+        <button class="btn" onclick="syncResult(false)">❌ バラバラ</button>
+      </div>
+      <button class="btn big" id="sync-draw" onclick="drawSync()">💞 お題を引く</button>
+      <div class="hint">ランダムな2人が「せーの」で同時に回答。<br><b>一致＝他の全員が飲む</b>／<b>バラバラ＝2人が飲む</b>！（メンバー登録で実名指名）</div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -727,12 +753,14 @@ function go(name){
   if(name==='would'){ resetWould(); }
   if(name==='king'){ resetKing(); }
   if(name==='wolf'){ resetWolf(); }
+  if(name==='sync'){ resetSync(); }
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
   if(name==='share'){ renderShare(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
+  if(current==='sync' && name!=='sync') stopSync();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
   current = name;
@@ -1410,6 +1438,53 @@ function wolfReveal(){
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   $('#wolf-result-text').innerHTML='🐺 ウルフは <b>'+(wolfWolfIdx+1)+'番</b> の人！<br><span style="font-size:.62em">市民「'+escapeHtml(wolfCWord)+'」／ウルフ「'+escapeHtml(wolfWWord)+'」</span>';
   fanfare(); confetti();
+}
+
+/* ============ 以心伝心 (ESP) ============ */
+const SYNC_CATS=[
+  '赤い食べ物といえば？','コンビニといえば？','夏といえば？','寿司ネタといえば？','スポーツといえば？',
+  'ドラえもんの道具といえば？','アイスの味といえば？','都道府県といえば？','果物といえば？','カラオケの定番曲といえば？',
+  'デートスポットといえば？','朝ごはんの定番といえば？','温泉地といえば？','おつまみといえば？','冬の食べ物といえば？',
+  '学校の教科といえば？','緑のものといえば？','丸いものといえば？','人気の漫画といえば？','調味料といえば？',
+  '花といえば？','鍋の具材といえば？','有名な観光地といえば？','動物といえば？','飲み物といえば？',
+  'ラーメンのトッピングといえば？','日本のお祭りといえば？','寒い国といえば？','子供の頃の遊びといえば？','焼肉の部位といえば？'
+];
+let syncTimer=null, syncA='', syncB='', syncCat='';
+function stopSync(){ if(syncTimer){ clearTimeout(syncTimer); syncTimer=null; } }
+function resetSync(){
+  stopSync();
+  const ico=$('#sync-ico'); ico.textContent='💞'; ico.style.fontSize='';
+  $('#sync-text').textContent='2人を選んでお題を引こう！';
+  $('#sync-judge').style.display='none';
+  $('#sync-draw').disabled=false; $('#sync-draw').textContent='💞 お題を引く';
+}
+function drawSync(){
+  audio(); buzz(15); stopSync();
+  const [a,b]=pickNames(2); syncA=a; syncB=b;
+  syncCat=SYNC_CATS[Math.floor(Math.random()*SYNC_CATS.length)];
+  $('#sync-judge').style.display='none';
+  $('#sync-draw').disabled=true;
+  $('#sync-text').innerHTML=`<b>${escapeHtml(a)}</b> と <b>${escapeHtml(b)}</b><br><span style="font-size:.7em;opacity:.85">息を合わせて！</span>`;
+  let n=3;
+  const tick=()=>{
+    const ico=$('#sync-ico');
+    ico.classList.remove('counting'); void ico.offsetWidth; ico.classList.add('counting');
+    if(n>0){ ico.textContent=n; ico.style.fontSize=''; beep(560,0.12,'square',0.16); buzz(10); n--; syncTimer=setTimeout(tick,800); }
+    else if(n===0){ ico.textContent='せーの！'; ico.style.fontSize='32px'; beep(950,0.25,'triangle',0.22); buzz([20,40,40]); n--; syncTimer=setTimeout(tick,900); }
+    else {
+      ico.style.fontSize=''; ico.textContent='💞';
+      $('#sync-text').innerHTML=`お題：<b>「${escapeHtml(syncCat)}」</b><br><span style="font-size:.7em;opacity:.85">${escapeHtml(syncA)} と ${escapeHtml(syncB)}、せーので発表！</span>`;
+      $('#sync-judge').style.display='flex'; $('#sync-draw').disabled=false; $('#sync-draw').textContent='💞 次のお題';
+      beep(700,0.1,'triangle',0.2); syncTimer=null;
+    }
+  };
+  tick();
+}
+function syncResult(match){
+  audio();
+  if(match) showLoser('他の全員！','息ピッタリ🎉 飲むのは');
+  else showLoser(`${syncA} と ${syncB}`,'バラバラ…飲むのは');
+  $('#sync-judge').style.display='none';
 }
 
 /* ============ SETTINGS UI ============ */
