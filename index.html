@@ -10,18 +10,22 @@
 <link rel="manifest" href="manifest.json">
 <style>
 :root{
-  --bg:#0b0420; --bg2:#1a0a3a;
+  --bg:#0b0420; --bg2:#1a0a3a; --bg-top:#2a0f5c;
   --card:#1c1140; --card2:#251552;
   --neon:#ff2e88; --neon2:#7b5bff; --cyan:#19e3ff; --gold:#ffd84d; --green:#34e89e; --red:#ff4d5e;
   --txt:#fff; --dim:#b9a9e6;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
 }
+/* ---------- color themes ---------- */
+:root[data-theme="sunset"]{ --bg:#1a0712; --bg2:#3a1124; --bg-top:#6e2230; --card:#2a1322; --card2:#371a2c; --neon:#ff6a3d; --neon2:#ff2e7a; --cyan:#ffb24d; --dim:#e6b3c6; }
+:root[data-theme="ocean"]{ --bg:#03101c; --bg2:#06283a; --bg-top:#0a5566; --card:#0c2436; --card2:#123347; --neon:#19e3ff; --neon2:#2a6cf0; --cyan:#34e8c0; --dim:#9ac7e6; }
+:root[data-theme="bar"]{ --bg:#0a0806; --bg2:#191309; --bg-top:#33260f; --card:#1c1610; --card2:#271f14; --neon:#ffb23d; --neon2:#e0892a; --cyan:#ffd84d; --gold:#ffe08a; --dim:#d8c39a; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 html,body{height:100%}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;
-  background:radial-gradient(120% 90% at 50% -10%, #2a0f5c 0%, var(--bg2) 38%, var(--bg) 100%);
+  background:radial-gradient(120% 90% at 50% -10%, var(--bg-top) 0%, var(--bg2) 38%, var(--bg) 100%);
   color:var(--txt); overflow:hidden; user-select:none; -webkit-user-select:none;
   position:fixed; inset:0;
 }
@@ -357,6 +361,9 @@ body{
 .seg-btn span{font-size:12px;font-weight:800;letter-spacing:.5px}
 .seg-btn.on{background:linear-gradient(92deg,var(--neon),var(--neon2));color:#fff;box-shadow:0 6px 16px rgba(123,91,255,.4)}
 .seg-btn:active{transform:scale(.95)}
+.theme-seg{gap:6px;padding:5px}
+.theme-seg .seg-btn{font-size:20px;padding:10px 2px}
+.theme-seg .seg-btn span{font-size:10px}
 .set-note{font-size:12px;color:var(--dim);margin:10px 2px 0;line-height:1.5}
 .set-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:16px;padding:14px 16px;margin-top:10px;font-size:16px;font-weight:700}
 .set-sub{font-size:11px;color:var(--dim);font-weight:600;margin-top:2px}
@@ -426,7 +433,16 @@ body{
   <!-- SETTINGS -->
   <section class="screen" id="s-settings">
     <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">⚙️ 設定</div></div>
-    <div class="set-label">🌶️ 強度レベル</div>
+    <div class="set-label">🎨 配色テーマ</div>
+    <div class="seg theme-seg" id="theme-seg">
+      <button class="seg-btn" data-theme="neon" onclick="setTheme('neon')">🌃<span>ネオン</span></button>
+      <button class="seg-btn" data-theme="sunset" onclick="setTheme('sunset')">🌅<span>サンセット</span></button>
+      <button class="seg-btn" data-theme="ocean" onclick="setTheme('ocean')">🌊<span>オーシャン</span></button>
+      <button class="seg-btn" data-theme="bar" onclick="setTheme('bar')">🍷<span>バー</span></button>
+    </div>
+    <div class="set-note">アプリ全体の雰囲気が変わります。</div>
+
+    <div class="set-label" style="margin-top:22px">🌶️ 強度レベル</div>
     <div class="seg" id="spice-seg">
       <button class="seg-btn" data-spice="1" onclick="setSpice(1)">😊<span>ソフト</span></button>
       <button class="seg-btn" data-spice="2" onclick="setSpice(2)">😎<span>ノーマル</span></button>
@@ -772,8 +788,15 @@ function load(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 
 /* ============ settings ============ */
-let settings = Object.assign({sound:true, vibe:true, spice:2}, load('nomigee_settings', {}));
+let settings = Object.assign({sound:true, vibe:true, spice:2, theme:'neon'}, load('nomigee_settings', {}));
 function saveSettings(){ save('nomigee_settings', settings); }
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', settings.theme||'neon');
+  const mt=document.querySelector('meta[name=theme-color]');
+  if(mt){ const c=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(); if(c) mt.setAttribute('content',c); }
+}
+function setTheme(t){ settings.theme=t; saveSettings(); applyTheme(); renderSettings(); audio(); beep(560,0.09,'triangle',0.18); buzz(12); }
+applyTheme();
 let customDares = load('nomigee_custom', []);
 
 /* ============ member-name injection (personalization) ============ */
@@ -1489,6 +1512,7 @@ function syncResult(match){
 
 /* ============ SETTINGS UI ============ */
 function renderSettings(){
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.theme===(settings.theme||'neon')));
   document.querySelectorAll('#spice-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.spice===settings.spice));
   $('#sw-sound').classList.toggle('on', !!settings.sound);
   $('#sw-vibe').classList.toggle('on', !!settings.vibe);
