@@ -256,15 +256,24 @@ body{
 /* ---------- result flash ---------- */
 .flash{
   position:absolute;inset:0;z-index:60;display:none;flex-direction:column;
-  align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;
-  background:radial-gradient(80% 60% at 50% 40%,rgba(255,46,136,.96),rgba(11,4,32,.98));
+  align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;overflow:hidden;
+  background:radial-gradient(72% 56% at 50% 38%,rgba(255,46,136,.94),rgba(11,4,32,.99));
   animation:flashin .35s ease both;
 }
 .flash.show{display:flex}
+.flash::before{
+  content:"";position:absolute;width:170vmax;height:170vmax;top:50%;left:50%;
+  transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:screen;opacity:.55;
+  background:conic-gradient(from 0deg,rgba(255,46,136,0),rgba(255,184,77,.5),rgba(25,227,255,0),rgba(123,91,255,.5),rgba(255,46,136,0));
+  animation:flashspin 9s linear infinite;
+}
+@keyframes flashspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes flashin{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
-.flash .loser-label{font-size:18px;font-weight:800;letter-spacing:4px;color:#ffd84d}
-.flash .loser-name{font-size:clamp(40px,14vw,80px);font-weight:900;line-height:1.05;text-shadow:0 4px 16px rgba(0,0,0,.5)}
-.flash .drink{font-size:64px;animation:wob .8s ease-in-out infinite}
+.flash>*{position:relative;z-index:1}
+.flash .loser-label{font-size:18px;font-weight:800;letter-spacing:4px;color:#ffd84d;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.flash .loser-name{font-size:clamp(40px,14vw,80px);font-weight:900;line-height:1.05;text-shadow:0 4px 18px rgba(0,0,0,.6)}
+.flash .drink{font-size:88px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));animation:drinkbounce .9s ease-in-out infinite}
+@keyframes drinkbounce{0%,100%{transform:translateY(0) rotate(-7deg)}50%{transform:translateY(-14px) rotate(7deg)}}
 
 /* confetti */
 .confetti{position:absolute;top:-10px;width:10px;height:16px;border-radius:2px;z-index:55;pointer-events:none}
@@ -582,6 +591,22 @@ function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 let settings = Object.assign({sound:true, vibe:true, spice:2}, load('nomigee_settings', {}));
 function saveSettings(){ save('nomigee_settings', settings); }
 
+/* ============ member-name injection (personalization) ============ */
+const GENERIC_NAMES=['右の人','左の人','向かいの人','最年少','最年長','今日の幹事','一番お酒が強い人','メガネの人','一番最近来た人','一番声が大きい人'];
+function pickNames(n){
+  const pool=[...players].filter(p=>p&&p.trim()), out=[], gen=[...GENERIC_NAMES];
+  for(let i=0;i<n;i++){
+    if(pool.length) out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+    else out.push(gen.length?gen.splice(Math.floor(Math.random()*gen.length),1)[0]:'だれか');
+  }
+  return out;
+}
+function fillNames(text){
+  if(!/\{p2?\}/.test(text)) return text;
+  const [a,b]=pickNames(2);
+  return text.replace(/\{p2\}/g,b).replace(/\{p\}/g,a);
+}
+
 /* ============ haptics + sound ============ */
 function buzz(ms){ if(settings.vibe && navigator.vibrate) navigator.vibrate(ms); }
 let actx=null;
@@ -713,11 +738,12 @@ function spinWheel(){
 
 /* ============ BOMB ============ */
 const BOMB_TASKS=[
-  '好きな食べ物を言って','右の人を褒めて','最近一番笑ったことは？','モノマネを1つ','嫌いな野菜を言って',
-  '今日のラッキーカラーは？','県名を1つ言って','동물の名前を1つ','芸能人を1人','好きな飲み物を言って',
+  '好きな食べ物を言って','{p}を褒めて','最近一番笑ったことは？','モノマネを1つ','嫌いな野菜を言って',
+  '今日のラッキーカラーは？','県名を1つ言って','動物の名前を1つ','芸能人を1人','好きな飲み物を言って',
   '昨日の夜ごはんは？','行きたい国を言って','カラオケの十八番は？','子供の頃の夢は？','果物の名前を1つ',
-  '左の人とハイタッチ','変顔を1つ','寿司ネタを1つ言って','好きな映画を1つ','テンション高く「乾杯！」',
-  '色の名前を1つ','スポーツを1つ言って','人差し指で鼻にタッチ','「ありがとう」を別の言葉で','元気よく自己紹介'
+  '{p}とハイタッチ','変顔を1つ','寿司ネタを1つ言って','好きな映画を1つ','テンション高く「乾杯！」',
+  '色の名前を1つ','スポーツを1つ言って','人差し指で鼻にタッチ','{p}の好きな所を1つ','元気よく自己紹介',
+  '{p}にひとこと感謝を','{p}のあだ名を考えて'
 ];
 let bombTimer=null, bombTick=null, bombRunning=false;
 function resetBombUI(){
@@ -751,7 +777,7 @@ function startBomb(){
 }
 function nextTask(){
   buzz(12);
-  $('#bomb-task').textContent = BOMB_TASKS[Math.floor(Math.random()*BOMB_TASKS.length)];
+  $('#bomb-task').textContent = fillNames(BOMB_TASKS[Math.floor(Math.random()*BOMB_TASKS.length)]);
 }
 function boom(){
   stopBomb();
@@ -863,10 +889,10 @@ const DARES={
   dare:['好きな人のモノマネをする','セクシーポーズで写真を撮られる','変な踊りを15秒','右の人に告白する（演技）','鼻歌で曲当てクイズ出題',
     '一番面白い顔をキープ10秒','腕立て5回','好きな歌をサビだけ熱唱','店員さん風に注文の口上','赤ちゃん言葉で1分話す',
     '誰かとデュエット','隣の人と腕を組んで乾杯','一発ギャグ','スマホの待受を見せる','全員と目を合わせてウインク'],
-  drink:['あなたが一気！','飲んでないと思う人を指名→その人が飲む','左隣と一緒に飲む','全員で乾杯して半分飲む','時計回りに全員ひと口',
-    '一番年下が飲む','メガネの人が飲む（いなければ自分）','最後に来た人が飲む','スマホを今触ってた人が飲む','じゃんけんして負けが飲む'],
-  all:['全員一気！🍻','男性陣 飲む','女性陣 飲む','一番声がデカい人が飲む','「乾杯」と最後に言った人以外飲む',
-    '全員ひと口→一番遅かった人がもう一杯','親指を最後にテーブルに置いた人が飲む','全員でチアーズ、半分']
+  drink:['{p}が一気！','{p}と{p2}で乾杯して飲む','{p}が今日の主役、ひと口','{p}が次に飲む人を指名→その人が飲む','左隣と一緒に飲む','時計回りに全員ひと口',
+    '{p}が一気！','一番年下が飲む','メガネの人が飲む（いなければ自分）','{p}と{p2}、後輩が飲む','スマホを今触ってた人が飲む','じゃんけんして負けが飲む'],
+  all:['全員一気！🍻','{p}以外 全員ひと口','男性陣 飲む','女性陣 飲む','{p}と{p2}で勝負、負けが飲む','「乾杯」と最後に言った人以外飲む',
+    '全員ひと口→一番遅かった人がもう一杯','{p}の音頭で全員 半分','全員でチアーズ、半分']
 };
 // 強度レベル別の追加お題（ソフト=健全 / 激辛=過激）。ノーマルは上のDARESが基準。
 const DARES_SOFT={
@@ -899,7 +925,7 @@ function drawDare(mode){
   let type;
   if(mode==='drink'){ type=Math.random()<0.6?'drink':'all'; }
   else { const pool=['truth','dare','dare','drink','all','truth']; type=pool[Math.floor(Math.random()*pool.length)]; }
-  const arr=darePool(type); const text=arr[Math.floor(Math.random()*arr.length)];
+  const arr=darePool(type); const text=fillNames(arr[Math.floor(Math.random()*arr.length)]);
   const m=DARE_META[type];
   const card=$('#dare-card');
   card.className='dare-card '+m.cls;
