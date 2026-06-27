@@ -250,6 +250,9 @@ body{
 .wyr-a{box-shadow:0 0 0 2px rgba(255,216,77,.5) inset}
 .wyr-b{box-shadow:0 0 0 2px rgba(255,110,174,.5) inset}
 .wyr-vs{font-size:15px;font-weight:900;letter-spacing:3px;opacity:.9}
+.wyr-opt{position:relative;cursor:pointer;transition:transform .1s}
+.wyr-opt:active{transform:scale(.96)}
+.wyr-cnt{position:absolute;top:-8px;right:-8px;min-width:26px;height:26px;border-radius:9px;background:#fff;color:#1a0a3a;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35)}
 
 /* ---------- King's game ---------- */
 .stepper{display:flex;align-items:center;justify-content:center;gap:18px}
@@ -707,13 +710,16 @@ body{
         <div class="dare-type">WOULD YOU RATHER</div>
         <div class="wyr-q" id="would-q">ボタンを押して<br>究極の2択を引こう！</div>
         <div class="wyr-opts" id="would-opts" style="display:none">
-          <div class="wyr-opt wyr-a" id="would-a">A</div>
+          <div class="wyr-opt wyr-a" id="would-a" onclick="wouldVote('a')"><span id="would-a-t">A</span><span class="wyr-cnt" id="would-a-n">0</span></div>
           <div class="wyr-vs">VS</div>
-          <div class="wyr-opt wyr-b" id="would-b">B</div>
+          <div class="wyr-opt wyr-b" id="would-b" onclick="wouldVote('b')"><span id="would-b-t">B</span><span class="wyr-cnt" id="would-b-n">0</span></div>
         </div>
       </div>
-      <button class="btn big" onclick="drawWould()">🤔 2択を引く</button>
-      <div class="hint">せーので「Aの人/Bの人」に手を挙げる → <b>少数派が飲む</b>（同数なら全員ひと口）。</div>
+      <div class="btn-row">
+        <button class="btn" id="would-draw" onclick="drawWould()">🤔 2択を引く</button>
+        <button class="btn gold" id="would-reveal" onclick="revealWould()" disabled>🗳️ 結果発表</button>
+      </div>
+      <div class="hint"><b>Aの人/Bの人を数えてタップ</b>で投票 → 結果発表で<b>少数派が飲む</b>（同数なら全員ひと口）。手で挙げて手動判定でもOK。</div>
     </div>
   </section>
 
@@ -1485,22 +1491,41 @@ const WOULD=[
   ['有名人と親友','大金持ちと親友'],['一生ネット無し','一生TV無し'],['寝なくて平気','食べなくて平気'],
   ['全部の動物と話せる','全部の楽器が弾ける'],['毎日が金曜','毎日が日曜'],['空が飛べる靴','どこでもドア']
 ];
-let wouldIdx=[];
+let wouldIdx=[], wouldVotes={a:0,b:0}, wouldAtxt='', wouldBtxt='';
 function resetWould(){
   $('#would-opts').style.display='none';
   $('#would-q').innerHTML='ボタンを押して<br>究極の2択を引こう！';
+  $('#would-reveal').disabled=true;
+  wouldVotes={a:0,b:0};
 }
 function drawWould(){
   audio(); buzz(18);
   if(!wouldIdx.length){ wouldIdx=[...Array(WOULD.length).keys()]; for(let i=wouldIdx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[wouldIdx[i],wouldIdx[j]]=[wouldIdx[j],wouldIdx[i]];} }
   const [a,b]=WOULD[wouldIdx.pop()];
+  wouldAtxt=a; wouldBtxt=b; wouldVotes={a:0,b:0};
   const card=$('#would-card');
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   $('#would-q').textContent='どっち派？';
-  $('#would-a').textContent='🅰 '+a;
-  $('#would-b').textContent='🅱 '+b;
+  $('#would-a-t').textContent='🅰 '+a;
+  $('#would-b-t').textContent='🅱 '+b;
+  $('#would-a-n').textContent='0'; $('#would-b-n').textContent='0';
   $('#would-opts').style.display='flex';
+  $('#would-reveal').disabled=false;
   beep(700,0.1,'triangle',0.2);
+}
+function wouldVote(side){
+  if($('#would-opts').style.display==='none') return;
+  wouldVotes[side]++; $('#would-'+side+'-n').textContent=wouldVotes[side];
+  beep(side==='a'?640:560,0.04,'square',0.1); buzz(6);
+}
+function revealWould(){
+  audio();
+  const a=wouldVotes.a, b=wouldVotes.b;
+  if(a===0 && b===0){ showLoser('少数派の人！','どっちが少数派？'); return; }
+  if(a===b){ showLoser('全員ひと口🍻','同数！'); return; }
+  const minorIsA = a<b;
+  const label = minorIsA ? `🅰「${wouldAtxt}」の少数派` : `🅱「${wouldBtxt}」の少数派`;
+  showLoser(label, `${Math.min(a,b)}人の少数派…飲むのは`);
 }
 
 /* ============ KING'S GAME (王様ゲーム) ============ */
