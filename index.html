@@ -80,6 +80,9 @@ body{
 .c-russian{background:linear-gradient(140deg,#7b5bff,#4422b8)}
 .c-stop{background:linear-gradient(140deg,#19c8ff,#1466e0)}
 .c-dare{background:linear-gradient(140deg,#34e89e,#0f9b6c)}
+.c-never{background:linear-gradient(140deg,#ff6fae,#8a2be2)}
+.c-most{background:linear-gradient(140deg,#ff9a3d,#ff3d77)}
+.c-would{background:linear-gradient(140deg,#2de0d0,#2a6cf0)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- Buttons ---------- */
@@ -184,6 +187,40 @@ body{
 .d-drink{background:linear-gradient(150deg,#ff8a3d,#e0334e)}
 .d-all{background:linear-gradient(150deg,#7b5bff,#4422b8)}
 
+/* ---------- Would-you-rather card ---------- */
+.wyr-card{
+  width:100%;max-width:360px;border-radius:26px;padding:24px 20px;min-height:240px;
+  display:flex;flex-direction:column;gap:14px;justify-content:center;align-items:center;text-align:center;
+  background:linear-gradient(150deg,#2de0d0,#2a6cf0);
+  box-shadow:0 16px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2);
+  animation:flip .4s ease both;
+}
+.wyr-q{font-size:21px;font-weight:900;line-height:1.4}
+.wyr-opts{display:flex;flex-direction:column;gap:10px;width:100%;align-items:center}
+.wyr-opt{
+  width:100%;border-radius:16px;padding:15px 14px;font-size:18px;font-weight:900;line-height:1.35;
+  background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.28);
+}
+.wyr-a{box-shadow:0 0 0 2px rgba(255,216,77,.5) inset}
+.wyr-b{box-shadow:0 0 0 2px rgba(255,110,174,.5) inset}
+.wyr-vs{font-size:15px;font-weight:900;letter-spacing:3px;opacity:.9}
+
+/* ---------- animated background (party bubbles) ---------- */
+#bgfx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+#bgfx span{
+  position:absolute;bottom:-14vh;border-radius:50%;opacity:.16;
+  background:radial-gradient(circle at 35% 30%, #fff6, transparent 60%), var(--c,#ff2e88);
+  animation:rise-bubble var(--d,16s) linear infinite;animation-delay:var(--delay,0s);
+  filter:blur(1px);
+}
+@keyframes rise-bubble{
+  0%{transform:translateY(0) scale(.6);opacity:0}
+  10%{opacity:.18}
+  90%{opacity:.16}
+  100%{transform:translateY(-120vh) scale(1.1);opacity:0}
+}
+#app{position:relative;z-index:1}
+
 /* ---------- result flash ---------- */
 .flash{
   position:absolute;inset:0;z-index:60;display:none;flex-direction:column;
@@ -205,6 +242,7 @@ body{
 </style>
 </head>
 <body>
+<div id="bgfx" aria-hidden="true"></div>
 <div id="app">
 
   <!-- HOME -->
@@ -228,6 +266,15 @@ body{
       </button>
       <button class="gcard c-dare" onclick="go('dare')">
         <div class="ico">🎴</div><div><div class="nm">お題ガチャ</div><div class="ds">真実・命令・一気。引いたお題をやる</div></div>
+      </button>
+      <button class="gcard c-never" onclick="go('never')">
+        <div class="ico">🙅</div><div><div class="nm">私は一度も…</div><div class="ds">やったことある人が飲む（指10本版）</div></div>
+      </button>
+      <button class="gcard c-most" onclick="go('most')">
+        <div class="ico">👉</div><div><div class="nm">誰が一番…?</div><div class="ds">せーので指名。最多票が飲む</div></div>
+      </button>
+      <button class="gcard c-would" onclick="go('would')">
+        <div class="ico">🤔</div><div><div class="nm">どっち派?</div><div class="ds">2択で割れろ。少数派が飲む</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
@@ -315,6 +362,55 @@ body{
     </div>
   </section>
 
+  <!-- NEVER HAVE I EVER -->
+  <section class="screen" id="s-never">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🙅 私は一度も…</div></div>
+    <div class="center">
+      <div class="dare-card d-truth" id="never-card">
+        <div class="dare-type">NEVER HAVE I EVER</div>
+        <div class="dare-ico">🙅</div>
+        <div class="dare-text">ボタンを押してお題を引こう！</div>
+      </div>
+      <button class="btn big" onclick="drawNever()">🙅 次のお題</button>
+      <div class="hint">読み上げ→<b>やったことある人が飲む</b>。<br>指10本を立てて、当てはまったら1本下げる→先に全部下げた人の負け、でも遊べる。</div>
+    </div>
+  </section>
+
+  <!-- MOST LIKELY TO -->
+  <section class="screen" id="s-most">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">👉 誰が一番…?</div></div>
+    <div class="center">
+      <div class="dare-card d-dare" id="most-card">
+        <div class="dare-type">MOST LIKELY TO</div>
+        <div class="dare-ico">👉</div>
+        <div class="dare-text">ボタンを押してお題を引こう！</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="most-q" onclick="drawMost()">🎲 お題を引く</button>
+        <button class="btn gold" id="most-reveal" onclick="revealMost()" disabled>👉 指名！結果</button>
+      </div>
+      <div class="hint">お題を読む→「せーの」で全員が一番ヤバい人を指さす。<br>「結果」で最多票を決めて飲ませよう（メンバー登録でランダム指名も）。</div>
+    </div>
+  </section>
+
+  <!-- WOULD YOU RATHER -->
+  <section class="screen" id="s-would">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">🤔 どっち派?</div></div>
+    <div class="center">
+      <div class="wyr-card" id="would-card">
+        <div class="dare-type">WOULD YOU RATHER</div>
+        <div class="wyr-q" id="would-q">ボタンを押して<br>究極の2択を引こう！</div>
+        <div class="wyr-opts" id="would-opts" style="display:none">
+          <div class="wyr-opt wyr-a" id="would-a">A</div>
+          <div class="wyr-vs">VS</div>
+          <div class="wyr-opt wyr-b" id="would-b">B</div>
+        </div>
+      </div>
+      <button class="btn big" onclick="drawWould()">🤔 2択を引く</button>
+      <div class="hint">せーので「Aの人/Bの人」に手を挙げる → <b>少数派が飲む</b>（同数なら全員ひと口）。</div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -337,6 +433,9 @@ function go(name){
   if(name==='players'){ renderPlayers(); setTimeout(()=>$('#pl-input').focus(),300); }
   if(name==='stop'){ initStop(); }
   if(name==='bomb'){ resetBombUI(); }
+  if(name==='never'){ resetNever(); }
+  if(name==='most'){ resetMost(); }
+  if(name==='would'){ resetWould(); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
@@ -652,6 +751,109 @@ function drawDare(mode){
   beep(660,0.1,'triangle',0.2);
   if(type==='drink'||type==='all'){ setTimeout(()=>{fanfare();confetti();},150); }
 }
+
+/* ============ NEVER HAVE I EVER ============ */
+const NEVER=[
+  '二日酔いで仕事/学校をサボったことがある','終電を逃して始発まで遊んだことがある','元恋人に未練でSNSを見たことがある',
+  'カラオケで本気でバラードを歌い上げたことがある','ナンパした/されたことがある','記憶をなくすまで飲んだことがある',
+  '人前で派手に転んだことがある','嘘の言い訳でデートを断ったことがある','合コンに行ったことがある','一目惚れしたことがある',
+  '寝坊して大事な約束に遅刻したことがある','こっそり人のSNSを全部さかのぼったことがある','酔って誰かに告白したことがある',
+  'トイレで電話したことがある','親に内緒で大きな買い物をしたことがある','旅行先で道に迷って大遅刻したことがある',
+  '会議中に寝たことがある','ダイエットを3日で諦めたことがある','元カレ/元カノとよりを戻したことがある',
+  'デート代をケチって嫌われたことがある','人の分のご飯まで食べたことがある','酔って財布やスマホを失くしたことがある',
+  '好きな人の前で噛みまくったことがある','深夜にラーメンを食べて後悔したことがある','約束をすっぽかしたことがある',
+  '寝言を録音されたことがある','勢いでタトゥー/ピアスを考えたことがある','一人カラオケに行ったことがある',
+  '推しに課金しすぎたことがある','SNSの投稿を秒で消したことがある'
+];
+let neverIdx=[];
+function resetNever(){ const c=$('#never-card'); c.querySelector('.dare-text').textContent='ボタンを押してお題を引こう！'; }
+function drawNever(){
+  audio(); buzz(15);
+  // no-repeat bag
+  if(!neverIdx.length){ neverIdx=[...Array(NEVER.length).keys()]; for(let i=neverIdx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[neverIdx[i],neverIdx[j]]=[neverIdx[j],neverIdx[i]];} }
+  const text='私は一度も… '+NEVER[neverIdx.pop()];
+  const card=$('#never-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  card.querySelector('.dare-text').textContent=text;
+  beep(620,0.1,'triangle',0.2);
+}
+
+/* ============ MOST LIKELY TO ============ */
+const MOST=[
+  '寝坊で遅刻しそう','酔って最初に潰れそう','元恋人に連絡しちゃいそう','宝くじが当たったら散財しそう',
+  '無人島で生き残れそう','秘密を守れなさそう','モテそう','先に結婚しそう','カラオケでマイクを離さなさそう',
+  '海外に移住しそう','道端で有名人に話しかけそう','貯金がなさそう','遅くまで飲んでそう','ロマンチストそう',
+  'ケンカが強そう','うっかり財布を忘れそう','SNSのフォロワーが多そう','先に寝そう','大胆な告白をしそう',
+  'ドジを踏みそう','おごってくれそう','浮気を見抜けなさそう','涙もろそう','運転が荒そう','嘘がバレやすそう'
+];
+let mostIdx=[];
+function resetMost(){
+  const c=$('#most-card'); c.querySelector('.dare-text').textContent='ボタンを押してお題を引こう！';
+  $('#most-reveal').disabled=true;
+}
+function drawMost(){
+  audio(); buzz(15);
+  if(!mostIdx.length){ mostIdx=[...Array(MOST.length).keys()]; for(let i=mostIdx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[mostIdx[i],mostIdx[j]]=[mostIdx[j],mostIdx[i]];} }
+  const text='誰が一番 '+MOST[mostIdx.pop()]+' ？';
+  const card=$('#most-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  card.querySelector('.dare-text').textContent=text;
+  $('#most-reveal').disabled=false;
+  beep(620,0.1,'triangle',0.2);
+}
+function revealMost(){
+  audio();
+  if(players.length>=2){
+    const pick=players[Math.floor(Math.random()*players.length)];
+    showLoser(pick,'最多票…飲むのは');
+  } else {
+    showLoser('一番指をさされた人！','指名された人が');
+  }
+}
+
+/* ============ WOULD YOU RATHER ============ */
+const WOULD=[
+  ['一生お酒が飲めない','一生コーヒーが飲めない'],['過去に戻れる','未来を覗ける'],['空を飛べる','透明になれる'],
+  ['給料2倍だけど友達半分','給料半分だけど友達2倍'],['一生同じ服','一生同じ髪型'],['毎日寿司','毎日焼肉'],
+  ['超有名だけど嫌われる','無名だけど愛される'],['記憶力が完璧','運動神経が完璧'],['夏だけの世界','冬だけの世界'],
+  ['一生スマホ禁止','一生TV禁止'],['人の心が読める','どんな言語も話せる'],['お金持ちで多忙','普通で自由'],
+  ['毎晩夜更かし','毎朝早起き'],['犬と話せる','猫と話せる'],['一生ラーメン無料','一生スイーツ無料'],
+  ['告白されたい','告白したい'],['10歳若返る','10年分の貯金'],['味覚が超敏感','嗅覚が超敏感'],
+  ['世界中を旅できる','宇宙に1回行ける'],['毎回ジャンケンに勝てる','毎回くじ運が良い']
+];
+let wouldIdx=[];
+function resetWould(){
+  $('#would-opts').style.display='none';
+  $('#would-q').innerHTML='ボタンを押して<br>究極の2択を引こう！';
+}
+function drawWould(){
+  audio(); buzz(18);
+  if(!wouldIdx.length){ wouldIdx=[...Array(WOULD.length).keys()]; for(let i=wouldIdx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[wouldIdx[i],wouldIdx[j]]=[wouldIdx[j],wouldIdx[i]];} }
+  const [a,b]=WOULD[wouldIdx.pop()];
+  const card=$('#would-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  $('#would-q').textContent='どっち派？';
+  $('#would-a').textContent='🅰 '+a;
+  $('#would-b').textContent='🅱 '+b;
+  $('#would-opts').style.display='flex';
+  beep(700,0.1,'triangle',0.2);
+}
+
+/* ============ animated background bubbles ============ */
+(function(){
+  const fx=document.getElementById('bgfx'); if(!fx) return;
+  const cols=['#ff2e88','#7b5bff','#19e3ff','#ffd84d','#34e89e','#ff8a3d'];
+  for(let i=0;i<14;i++){
+    const s=document.createElement('span');
+    const size=30+Math.random()*90;
+    s.style.left=Math.random()*100+'%';
+    s.style.width=size+'px'; s.style.height=size+'px';
+    s.style.setProperty('--c',cols[i%cols.length]);
+    s.style.setProperty('--d',(12+Math.random()*14)+'s');
+    s.style.setProperty('--delay',(-Math.random()*18)+'s');
+    fx.appendChild(s);
+  }
+})();
 
 /* unlock audio on first touch */
 document.addEventListener('touchstart',()=>audio(),{once:true});
