@@ -48,7 +48,14 @@ body{
 .spacer{flex:1}
 
 /* ---------- Home ---------- */
-.hero{text-align:center;margin:6px 0 4px}
+.hero{text-align:center;margin:6px 0 4px;position:relative}
+.hero::before{
+  content:"";position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);
+  width:260px;height:200px;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle, rgba(255,46,136,.4), rgba(123,91,255,.18) 45%, transparent 72%);
+  filter:blur(22px);animation:glowpulse 4.5s ease-in-out infinite;
+}
+@keyframes glowpulse{0%,100%{opacity:.45;transform:translate(-50%,-50%) scale(1)}50%{opacity:.85;transform:translate(-50%,-50%) scale(1.18)}}
 .logo{
   font-size:46px;font-weight:900;letter-spacing:1px;line-height:1.05;
   background:linear-gradient(92deg,var(--neon),var(--gold) 45%,var(--cyan));
@@ -83,6 +90,7 @@ body{
 .c-never{background:linear-gradient(140deg,#ff6fae,#8a2be2)}
 .c-most{background:linear-gradient(140deg,#ff9a3d,#ff3d77)}
 .c-would{background:linear-gradient(140deg,#2de0d0,#2a6cf0)}
+.c-king{background:linear-gradient(140deg,#ffd84d,#7b2ff7)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- Buttons ---------- */
@@ -205,6 +213,30 @@ body{
 .wyr-b{box-shadow:0 0 0 2px rgba(255,110,174,.5) inset}
 .wyr-vs{font-size:15px;font-weight:900;letter-spacing:3px;opacity:.9}
 
+/* ---------- King's game ---------- */
+.stepper{display:flex;align-items:center;justify-content:center;gap:18px}
+.step-btn{
+  width:56px;height:56px;border:none;border-radius:18px;font-size:30px;font-weight:900;cursor:pointer;
+  background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center;
+}
+.step-btn:active{transform:scale(.9);background:rgba(255,255,255,.2)}
+.step-val{font-size:24px;font-weight:900;min-width:88px}
+.step-val span{font-size:34px;color:var(--gold)}
+.king-lot{
+  width:min(78vw,300px);height:min(78vw,300px);max-height:46vh;border-radius:28px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#2a1a5e,#160a36);
+  box-shadow:0 16px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.18);
+  border:2px solid rgba(255,216,77,.25);
+}
+.king-lot.revealed{background:linear-gradient(150deg,#ffd84d,#7b2ff7);animation:lotpop .35s cubic-bezier(.2,1.4,.4,1)}
+.king-lot.king{background:linear-gradient(150deg,#ffe98a,#b8860b)}
+@keyframes lotpop{from{transform:scale(.8);opacity:.4}to{transform:none;opacity:1}}
+.king-lot-face{font-size:clamp(48px,18vw,96px);font-weight:900;color:#fff;text-shadow:0 4px 14px rgba(0,0,0,.4);text-align:center;line-height:1.1}
+.king-lot.king .king-lot-face{color:#3a1d00}
+.d-king{background:linear-gradient(150deg,#ffd84d,#7b2ff7)}
+.d-king .dare-text{color:#fff}
+
 /* ---------- animated background (party bubbles) ---------- */
 #bgfx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
 #bgfx span{
@@ -275,6 +307,9 @@ body{
       </button>
       <button class="gcard c-would" onclick="go('would')">
         <div class="ico">🤔</div><div><div class="nm">どっち派?</div><div class="ds">2択で割れろ。少数派が飲む</div></div>
+      </button>
+      <button class="gcard c-king" onclick="go('king')">
+        <div class="ico">👑</div><div><div class="nm">王様ゲーム</div><div class="ds">番号を配って王様が命令。定番の宴会芸</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
@@ -411,6 +446,45 @@ body{
     </div>
   </section>
 
+  <!-- KING'S GAME -->
+  <section class="screen" id="s-king">
+    <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">👑 王様ゲーム</div></div>
+    <div class="center" id="king-stage">
+      <!-- setup -->
+      <div id="king-setup">
+        <div style="font-size:64px;margin-bottom:6px">👑</div>
+        <div class="hint" style="margin-bottom:14px">人数を選んで「番号を配る」。<br>スマホを回して<b>一人ずつ自分のクジを確認</b>→王様が命令！</div>
+        <div class="stepper">
+          <button class="step-btn" onclick="kingStep(-1)">−</button>
+          <div class="step-val"><span id="king-n">4</span> 人</div>
+          <button class="step-btn" onclick="kingStep(1)">＋</button>
+        </div>
+        <button class="btn big gold" style="margin-top:18px" onclick="kingDeal()">🎴 番号を配る</button>
+      </div>
+      <!-- dealing (pass the phone) -->
+      <div id="king-deal" style="display:none">
+        <div class="hint" id="king-deal-hint">1人目さん、タップして自分のクジを見る</div>
+        <div class="king-lot" id="king-lot" onclick="kingLotTap()">
+          <div class="king-lot-face" id="king-lot-face">👆 タップ</div>
+        </div>
+        <button class="btn big" id="king-deal-btn" onclick="kingLotTap()">めくる</button>
+      </div>
+      <!-- king's command -->
+      <div id="king-order" style="display:none">
+        <div class="dare-card d-king" id="king-order-card">
+          <div class="dare-type">KING'S ORDER</div>
+          <div class="dare-ico">👑</div>
+          <div class="dare-text" id="king-order-text">命令</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="kingReroll()">🎲 別の命令</button>
+          <button class="btn gold" onclick="kingDeal()">🔄 次のラウンド</button>
+        </div>
+        <div class="hint">王様（👑を引いた人）が番号を指定して命令。番号の人は従うか、イヤなら一気！</div>
+      </div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -436,6 +510,7 @@ function go(name){
   if(name==='never'){ resetNever(); }
   if(name==='most'){ resetMost(); }
   if(name==='would'){ resetWould(); }
+  if(name==='king'){ resetKing(); }
   if(current==='bomb' && name!=='bomb') stopBomb();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
@@ -837,6 +912,79 @@ function drawWould(){
   $('#would-b').textContent='🅱 '+b;
   $('#would-opts').style.display='flex';
   beep(700,0.1,'triangle',0.2);
+}
+
+/* ============ KING'S GAME (王様ゲーム) ============ */
+const KING_ORDERS=[
+  '{a}番が一気！','{a}番と{b}番でチークタイム（肩を組む）','{a}番が{b}番にお酌をする',
+  '{a}番が一発ギャグ、スベったら一気','{a}番が{b}番の良いところを3つ言う','{a}番と{b}番で見つめ合い10秒、笑ったら飲む',
+  '{a}番が今いちばん気になる人を発表','{a}番と{b}番でハイタッチ','{a}番がモノマネを披露',
+  '{a}番と{b}番が手をつないで乾杯','{a}番が次の王様を予想、外れたら一気','{a}番が{b}番に質問1つ、答えられなきゃ{b}番が飲む',
+  '{a}番がこの中で一番面白い人を指名→その人が飲む','{a}番が両隣にお酒を注ぐ','全員で乾杯！{a}番だけ一気',
+  '{a}番がセクシー（or キメ）ポーズ、できなきゃ一気','{a}番が{b}番をあだ名で呼ぶ（このゲーム中ずっと）','{a}番が好きなタイプを正直に発表',
+  '{a}番と{b}番、にらめっこ。負けた方が飲む','{a}番がスマホの最近の写真を1枚見せる'
+];
+let kingN=4, kingLots=[], kingDealIdx=0, kingRevealed=false;
+function resetKing(){
+  kingN=Math.min(12,Math.max(2, players.length||4));
+  $('#king-n').textContent=kingN;
+  $('#king-setup').style.display='';
+  $('#king-deal').style.display='none';
+  $('#king-order').style.display='none';
+}
+function kingStep(d){ kingN=Math.min(12,Math.max(2,kingN+d)); $('#king-n').textContent=kingN; buzz(10); beep(520,0.04,'square',0.1); }
+function kingDeal(){
+  audio();
+  kingLots=['👑']; for(let i=1;i<kingN;i++) kingLots.push(i);
+  for(let i=kingLots.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [kingLots[i],kingLots[j]]=[kingLots[j],kingLots[i]]; }
+  kingDealIdx=0; kingRevealed=false;
+  $('#king-setup').style.display='none';
+  $('#king-order').style.display='none';
+  $('#king-deal').style.display='';
+  kingPrepFace();
+}
+function kingPrepFace(){
+  $('#king-lot').className='king-lot';
+  $('#king-lot-face').innerHTML='👆 タップ';
+  $('#king-deal-btn').textContent='めくる';
+  $('#king-deal-hint').innerHTML=(kingDealIdx+1)+'人目さん、タップして自分のクジを見る';
+}
+function kingLotTap(){
+  audio();
+  if(!kingRevealed){
+    const lot=kingLots[kingDealIdx], isKing=(lot==='👑');
+    $('#king-lot').className='king-lot revealed'+(isKing?' king':'');
+    $('#king-lot-face').innerHTML=isKing?'👑<br>王様！':('<span style="font-size:1.5em">'+lot+'</span><br>番');
+    kingRevealed=true;
+    $('#king-deal-btn').textContent='🙈 隠して次の人へ';
+    $('#king-deal-hint').textContent='確認したら隠して次の人へ回す';
+    buzz(isKing?[20,40,30]:15); beep(isKing?900:650,0.12,'triangle',0.2);
+  } else {
+    kingRevealed=false; kingDealIdx++;
+    if(kingDealIdx>=kingN) kingFinish();
+    else { kingPrepFace(); buzz(8); }
+  }
+}
+function kingFinish(){
+  $('#king-deal').style.display='none';
+  $('#king-order').style.display='';
+  kingReroll(); fanfare(); confetti();
+}
+function kingPickOrder(){
+  const numCount=kingN-1; // numbers are 1..kingN-1 (王様 takes one lot)
+  const pool=KING_ORDERS.filter(o=> o.includes('{b}') ? numCount>=2 : true);
+  let o=pool[Math.floor(Math.random()*pool.length)];
+  const nums=[]; for(let i=1;i<kingN;i++) nums.push(i);
+  const a=nums.splice(Math.floor(Math.random()*nums.length),1)[0];
+  const b=nums.length?nums[Math.floor(Math.random()*nums.length)]:a;
+  return o.replace(/\{a\}/g,a).replace(/\{b\}/g,b);
+}
+function kingReroll(){
+  audio();
+  const card=$('#king-order-card');
+  card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  $('#king-order-text').textContent=kingPickOrder();
+  beep(720,0.1,'triangle',0.2); buzz(15);
 }
 
 /* ============ animated background bubbles ============ */
