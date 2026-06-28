@@ -831,7 +831,7 @@ body{
       <!-- setup -->
       <div id="wolf-setup">
         <div style="font-size:64px;margin-bottom:6px">🐺</div>
-        <div class="hint" style="margin-bottom:14px">全員にお題（言葉）を配ります。<b>1人だけ違う言葉＝ウルフ</b>。<br>話し合ってウルフを探せ！</div>
+        <div class="hint" style="margin-bottom:14px">全員に言葉を配ります。<b>少数だけ違う言葉＝ウルフ</b>（7人以上は2人）。<br>話し合ってウルフを探せ！</div>
         <div class="stepper">
           <button class="step-btn" onclick="wolfStep(-1)">−</button>
           <div class="step-val"><span id="wolf-n">4</span> 人</div>
@@ -850,7 +850,7 @@ body{
       <!-- discussion -->
       <div id="wolf-discuss" style="display:none">
         <div class="wolf-ring" id="wolf-ring"><span id="wolf-time">3:00</span></div>
-        <div class="hint">自分の言葉を直接は言わずに話し合い！<br><b>1人だけ違う言葉を持つウルフ</b>を見つけよう。せーので指さして投票→発表。</div>
+        <div class="hint" id="wolf-discuss-hint">自分の言葉を直接は言わずに話し合い！<br><b>違う言葉を持つウルフ</b>を見つけよう。せーので指さして投票→発表。</div>
         <div class="btn-row">
           <button class="btn ghost" id="wolf-timer-btn" onclick="toggleWolfTimer()">⏸ 一時停止</button>
           <button class="btn gold" onclick="wolfReveal()">🗳️ 投票して発表</button>
@@ -1758,7 +1758,7 @@ const WOLF_PAIRS=[
   ['焼き鳥','つくね'],['朝顔','ひまわり'],['そば','うどん'],['牛乳','豆乳'],['日記','メモ'],
   ['野球','ソフトボール'],['指輪','ネックレス'],['花火','線香花火'],['カフェ','喫茶店'],['毛布','タオルケット']
 ];
-let wolfN=4, wolfWords=[], wolfDealIdx=0, wolfRevealed=false, wolfWolfIdx=0, wolfCWord='', wolfWWord='', wolfTimer=null, wolfRemain=180, wolfPaused=false;
+let wolfN=4, wolfWords=[], wolfDealIdx=0, wolfRevealed=false, wolfWolfIdxs=[], wolfCWord='', wolfWWord='', wolfTimer=null, wolfRemain=180, wolfPaused=false;
 function resetWolf(){
   stopWolfTimer();
   wolfN=Math.min(12,Math.max(3, players.length||4));
@@ -1771,8 +1771,10 @@ function wolfDeal(){
   const pair=WOLF_PAIRS[Math.floor(Math.random()*WOLF_PAIRS.length)];
   const swap=Math.random()<0.5;
   wolfCWord=swap?pair[1]:pair[0]; wolfWWord=swap?pair[0]:pair[1];
-  wolfWolfIdx=Math.floor(Math.random()*wolfN);
-  wolfWords=[]; for(let i=0;i<wolfN;i++) wolfWords.push(i===wolfWolfIdx?wolfWWord:wolfCWord);
+  const numWolves = wolfN>=7 ? 2 : 1; // 標準ルール: 7人以上はウルフ2人
+  wolfWolfIdxs=[];
+  while(wolfWolfIdxs.length<numWolves){ const r=Math.floor(Math.random()*wolfN); if(!wolfWolfIdxs.includes(r)) wolfWolfIdxs.push(r); }
+  wolfWords=[]; for(let i=0;i<wolfN;i++) wolfWords.push(wolfWolfIdxs.includes(i)?wolfWWord:wolfCWord);
   wolfDealIdx=0; wolfRevealed=false;
   $('#wolf-setup').style.display='none'; $('#wolf-result').style.display='none'; $('#wolf-discuss').style.display='none';
   $('#wolf-deal').style.display='';
@@ -1803,6 +1805,8 @@ function wolfLotTap(){
 function wolfStartDiscuss(){
   $('#wolf-deal').style.display='none';
   $('#wolf-discuss').style.display='';
+  const n=wolfWolfIdxs.length;
+  $('#wolf-discuss-hint').innerHTML=`自分の言葉を直接は言わずに話し合い！<br><b>違う言葉を持つウルフ（${n}人）</b>を見つけよう。せーので指さして投票→発表。`;
   wolfRemain=180; wolfPaused=false; updateWolfRing(); startWolfTimer();
 }
 function startWolfTimer(){
@@ -1828,7 +1832,9 @@ function wolfReveal(){
   $('#wolf-result').style.display='';
   const card=$('#wolf-result-card');
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
-  $('#wolf-result-text').innerHTML='🐺 ウルフは <b>'+(wolfWolfIdx+1)+'番</b> の人！<br><span style="font-size:.62em">市民「'+escapeHtml(wolfCWord)+'」／ウルフ「'+escapeHtml(wolfWWord)+'」</span>';
+  const seats=wolfWolfIdxs.map(i=>i+1).sort((a,b)=>a-b).join('・');
+  const n=wolfWolfIdxs.length;
+  $('#wolf-result-text').innerHTML='🐺 ウルフ('+n+'人)は <b>'+seats+'番</b>！<br><span style="font-size:.62em">市民「'+escapeHtml(wolfCWord)+'」／ウルフ「'+escapeHtml(wolfWWord)+'」</span>';
   fanfare(); confetti();
 }
 
@@ -2051,7 +2057,7 @@ const HOWTO=[
   {ico:'👉',name:'誰が一番…?',col:'#ff9a3d',desc:'せーので一番ヤバい人を指さす。',drink:'最多票の人が飲む'},
   {ico:'🤔',name:'どっち派?',col:'#2de0d0',desc:'2択に分かれて手を挙げる。',drink:'少数派が飲む（同数なら全員ひと口）'},
   {ico:'👑',name:'王様ゲーム',col:'#ffd84d',desc:'番号を配り、王様が番号を指定して命令。',drink:'指名された人が従う or 一気'},
-  {ico:'🐺',name:'ワードウルフ',col:'#7c8aa8',desc:'1人だけ違う言葉＝ウルフ。話し合って探す。',drink:'当てたらウルフ／外したら市民が飲む'},
+  {ico:'🐺',name:'ワードウルフ',col:'#7c8aa8',desc:'少数だけ違う言葉＝ウルフ(7人以上は2人)。話し合って探す。',drink:'当てたらウルフ／外したら市民が飲む'},
   {ico:'💞',name:'以心伝心',col:'#ff8fb1',desc:'2人がせーので同じ答えを狙う。',drink:'一致＝他全員／バラバラ＝2人が飲む'},
   {ico:'⚡',name:'お題ラッシュ',col:'#ff3d81',desc:'指名された人が30秒でお題を指定数言えるか挑戦。',drink:'言えなかった人が飲む'},
   {ico:'🥊',name:'連打バトル',col:'#ff4d6d',desc:'2人で画面の左右を3秒間連打して対決。',drink:'タップ数が少ない方が飲む'}
