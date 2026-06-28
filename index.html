@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0420">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -229,7 +229,7 @@ body{
 @keyframes flip{from{opacity:0;transform:rotateY(40deg) scale(.9)}to{opacity:1;transform:none}}
 .dare-type{font-size:13px;font-weight:900;letter-spacing:3px;opacity:.85}
 .dare-ico{font-size:54px}
-.dare-text{font-size:23px;font-weight:900;line-height:1.45}
+.dare-text{font-size:23px;font-weight:900;line-height:1.45;text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .d-truth{background:linear-gradient(150deg,#19c8ff,#1466e0)}
 .d-dare{background:linear-gradient(150deg,#ff5e9c,#b3258f)}
 .d-drink{background:linear-gradient(150deg,#ff8a3d,#e0334e)}
@@ -244,7 +244,7 @@ body{
   box-shadow:0 16px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2);
   animation:flip .4s ease both;
 }
-.wyr-q{font-size:21px;font-weight:900;line-height:1.4}
+.wyr-q{font-size:21px;font-weight:900;line-height:1.4;text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .wyr-opts{display:flex;flex-direction:column;gap:10px;width:100%;align-items:center}
 .wyr-opt{
   width:100%;border-radius:16px;padding:15px 14px;font-size:18px;font-weight:900;line-height:1.35;
@@ -323,7 +323,8 @@ body{
 /* ---------- result flash ---------- */
 .flash{
   position:absolute;inset:0;z-index:60;display:none;flex-direction:column;
-  align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;overflow:hidden;
+  align-items:center;justify-content:center;gap:14px;text-align:center;
+  padding:calc(var(--safe-top) + 24px) 24px calc(var(--safe-bot) + 24px);overflow:hidden auto;
   background:radial-gradient(72% 56% at 50% 38%,rgba(255,46,136,.94),rgba(11,4,32,.99));
   animation:flashin .35s ease both;
 }
@@ -578,7 +579,7 @@ body{
   <!-- HOW TO GUIDE -->
   <section class="screen" id="s-howto">
     <div class="topbar"><button class="back" onclick="go('home')">‹</button><div class="title-sm">❓ 遊び方ガイド</div></div>
-    <div class="hint" style="margin-bottom:12px">全11ゲームのルールと「誰が飲むか」。<br>メンバー登録で名前が反映＆戦績がつき、負けたら罰ゲームも引けます。</div>
+    <div class="hint" style="margin-bottom:12px">全13ゲームのルールと「誰が飲むか」。<br>メンバー登録で名前が反映＆戦績がつき、負けたら罰ゲームも引けます。</div>
     <div id="howto-list"></div>
     <div class="spacer"></div>
     <button class="btn ghost" onclick="go('home')">ホームへ戻る</button>
@@ -946,7 +947,7 @@ body{
     <div class="logo" style="font-size:42px"><span class="emoji">🍻</span> のみゲー</div>
     <div class="w-sub">スマホ1台で盛り上がる飲み会ゲーム集へようこそ！</div>
     <div class="w-list">
-      <div class="w-item"><span class="e">🎮</span><span><b>12ゲーム＋おまかせ</b>を収録。負けた人が飲む、それだけ。</span></div>
+      <div class="w-item"><span class="e">🎮</span><span><b>13ゲーム＋おまかせ</b>を収録。負けた人が飲む、それだけ。</span></div>
       <div class="w-item"><span class="e">👥</span><span><b>メンバーを登録</b>すると、名前がお題に登場＆<b>戦績</b>がつきます。</span></div>
       <div class="w-item"><span class="e">🎲</span><span>飲めない人は<b>罰ゲーム</b>でもOK（モノマネ等）。みんなで安全に。</span></div>
       <div class="w-item"><span class="e">📲</span><span><b>ホーム画面に追加</b>すれば、電波が無くてもサクサク遊べます。</span></div>
@@ -990,6 +991,8 @@ function go(name){
   if(name==='howto'){ renderHowto(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
   if(name==='teams'){ resetTeams(); }
+  if(current==='roulette' && name!=='roulette') stopRoulette();
+  if(current==='russian' && name!=='russian') stopRussian();
   if(current==='bomb' && name!=='bomb') stopBomb();
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
   if(current==='sync' && name!=='sync') stopSync();
@@ -1126,7 +1129,7 @@ const PENALTIES=[
   '一気に飲む🍺','次の1ゲームは飲み物2倍','自分史上最高の笑顔をキープ','好きな芸能人になりきって一言','ことわざを1つ作って発表',
   'スクワット10回','好きな食べ物だけで30秒トーク','その場でジャンプ5回','アニメ声で自己紹介','変顔のまま乾杯',
   '隣の人の好きな所を熱弁','ラップ調で「乾杯」','歌のサビをハモる(誰かと)','低い声で「いらっしゃいませ」','3秒で泣き真似',
-  '好きな人のイニシャルだけ言う','腹筋を見せる（演技でOK）の構え','宇宙語で30秒','左手で似顔絵を描く','面白い名前のあだ名を自分につける',
+  '好きな人のイニシャルだけ言う','力こぶを見せるポーズ','宇宙語で30秒','左手で似顔絵を描く','面白い名前のあだ名を自分につける',
   '好きな映画の名シーン再現','全員と目を合わせて投げキッス','早口言葉に挑戦','次に飲む人を物まねで指名','一発ギャグもう1つ'
 ];
 let penaltyTimer=null, penaltySpinning=false;
@@ -1177,11 +1180,11 @@ function shareScores(){
   const rows=players.map(p=>({name:p,n:drinkCounts[p]||0})).filter(r=>r.n>0).sort((a,b)=>b.n-a.n);
   let text;
   if(!rows.length){
-    text='🍻 のみゲーで飲み会ゲーム！負けたら飲む、スマホ1台で12ゲーム。\n'+shareUrl();
+    text='🍻 のみゲーで飲み会ゲーム！負けたら飲む、スマホ1台で13ゲーム。\n'+shareUrl();
   } else {
     const medals=['🥇','🥈','🥉'];
     const lines=rows.map((r,i)=>`${medals[i]||'・'} ${r.name}：${r.n}回`).join('\n');
-    text=`🍻 今夜の飲まされ番付（のみゲー）\n${lines}\n\nスマホ1台で12ゲーム！→ ${shareUrl()}`;
+    text=`🍻 今夜の飲まされ番付（のみゲー）\n${lines}\n\nスマホ1台で13ゲーム！→ ${shareUrl()}`;
   }
   if(navigator.share){ navigator.share({title:'のみゲー 今夜の戦績🍻', text}).catch(()=>{}); }
   else {
@@ -1228,10 +1231,11 @@ function renderPlayers(){
   list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{ players.splice(+e.target.dataset.i,1); save('nomigee_players',players); renderPlayers(); });
   $('#pl-hint').textContent = players.length<2 ? '⚠️ 2人以上で登録してね' : `👥 ${players.length}人 登録中`;
 }
+function uniquePlayerName(v){ let n=v, i=2; while(players.includes(n)) n=v+i++; return n; }
 function addPlayer(){
   const inp=$('#pl-input'); const v=inp.value.trim();
   if(!v) return;
-  players.push(v); save('nomigee_players',players); inp.value=''; renderPlayers();
+  players.push(uniquePlayerName(v)); save('nomigee_players',players); inp.value=''; renderPlayers();
   buzz(15);
 }
 
@@ -1257,7 +1261,13 @@ function addCustom(){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============ ROULETTE ============ */
-let wheelRot=0, spinning=false;
+let wheelRot=0, spinning=false, rlTickInt=null, rlClearT=null, rlResultT=null;
+function stopRoulette(){
+  if(rlTickInt){ clearInterval(rlTickInt); rlTickInt=null; }
+  if(rlClearT){ clearTimeout(rlClearT); rlClearT=null; }
+  if(rlResultT){ clearTimeout(rlResultT); rlResultT=null; }
+  spinning=false;
+}
 function buildWheel(){
   const svg=$('#wheel'); const n=players.length;
   svg.style.transition='none'; svg.style.transform='rotate(0deg)'; wheelRot=0;
@@ -1294,11 +1304,12 @@ function spinWheel(){
   const svg=$('#wheel');
   svg.style.transition='transform 5s cubic-bezier(.13,.86,.18,1)';
   svg.style.transform=`rotate(${wheelRot}deg)`;
-  const tickInt=setInterval(()=>{ beep(800,0.03,'square',0.08); },120);
-  setTimeout(()=>{ clearInterval(tickInt); },4200);
+  rlTickInt=setInterval(()=>{ beep(800,0.03,'square',0.08); },120);
+  rlClearT=setTimeout(()=>{ if(rlTickInt){clearInterval(rlTickInt);rlTickInt=null;} },4200);
   $('#rl-hint').textContent='🌀 回転中…';
-  setTimeout(()=>{
-    spinning=false; $('#rl-spin').disabled=false;
+  rlResultT=setTimeout(()=>{
+    rlResultT=null; spinning=false; $('#rl-spin').disabled=false;
+    if(current!=='roulette') return; // 遷移済みなら結果オーバーレイを出さない
     $('#rl-hint').textContent=`🍷 ${players[winner]} の負け！`;
     showLoser(players[winner]);
   },5100);
@@ -1366,7 +1377,8 @@ function stopBomb(){
 }
 
 /* ============ RUSSIAN ============ */
-let ruCount=load('nomigee_rucount',6), ruBomb=-1, ruOver=false, ruPicks=0;
+let ruCount=load('nomigee_rucount',6), ruBomb=-1, ruOver=false, ruPicks=0, ruLoserTimer=null;
+function stopRussian(){ if(ruLoserTimer){ clearTimeout(ruLoserTimer); ruLoserTimer=null; } }
 function ensureRussian(){ renderRuSeg(); if(!$('#cup-grid').children.length || ruOver) newRussianGame(); }
 function renderRuSeg(){ document.querySelectorAll('#ru-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.rc===ruCount)); }
 function setRuCount(n){ ruCount=n; save('nomigee_rucount',ruCount); renderRuSeg(); newRussianGame(); audio(); beep(520,0.05,'square',0.12); buzz(8); }
@@ -1390,7 +1402,7 @@ function pickCup(i,b){
     explosion();
     $('#ru-hint').textContent='💥 アタリ！今選んだ人が飲む！';
     [...$('#cup-grid').children].forEach(c=>c.disabled=true);
-    setTimeout(()=>showLoser('今選んだキミ！','一気！'),300);
+    ruLoserTimer=setTimeout(()=>{ ruLoserTimer=null; if(current==='russian') showLoser('今選んだキミ！','一気！'); },300);
   } else {
     b.classList.add('safe'); b.textContent='✅'; b.disabled=true;
     beep(700,0.06,'triangle',0.15); buzz(15);
@@ -1435,7 +1447,7 @@ function stopMain(){
     $('#st-judge').style.display = stScores.length>=2 ? '' : 'none';
   }
 }
-function stopNextLabel(){ return players[stScores.length] || ('プレイヤー'+(stScores.length+1)); }
+function stopNextLabel(){ return players.length ? players[stScores.length % players.length] : ('プレイヤー'+(stScores.length+1)); }
 function renderStopScores(){
   const box=$('#st-scores'); box.innerHTML='';
   let worst=-1,wi=-1; stScores.forEach((s,i)=>{ if(s.diff>worst){worst=s.diff;wi=i;} });
@@ -1646,6 +1658,7 @@ function revealWould(){
   audio();
   const a=wouldVotes.a, b=wouldVotes.b;
   if(a===0 && b===0){ showLoser('少数派の人！','どっちが少数派？'); return; }
+  if(a===0 || b===0){ showLoser('全員一致！🍻 少数派なし','満場一致！みんなで乾杯'); return; }
   if(a===b){ showLoser('全員ひと口🍻','同数！'); return; }
   const minorIsA = a<b;
   const label = minorIsA ? `🅰「${wouldAtxt}」の少数派` : `🅱「${wouldBtxt}」の少数派`;
