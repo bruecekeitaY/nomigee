@@ -1006,7 +1006,13 @@ function go(name){
 
 const COLORS = ['#ff2e88','#7b5bff','#19e3ff','#ffd84d','#34e89e','#ff8a3d','#ff5e6e','#b06bff','#3dd6ff','#ffb23d'];
 let players = load('nomigee_players', ['たろう','はなこ','けんじ','ゆい']);
-function load(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } }
+function load(k,d){ try{
+  const v=JSON.parse(localStorage.getItem(k));
+  if(v==null) return d;
+  if(Array.isArray(d)) return Array.isArray(v)?v:d;                       // 配列を期待
+  if(d&&typeof d==='object') return (v&&typeof v==='object'&&!Array.isArray(v))?v:d; // オブジェクトを期待
+  return (typeof v===typeof d)?v:d;
+}catch(e){ return d } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 
 /* ============ settings ============ */
@@ -1224,15 +1230,31 @@ function renderPlayers(){
     const row=document.createElement('div'); row.className='pl-item';
     const col=COLORS[i%COLORS.length];
     row.innerHTML=`<div class="pl-dot" style="background:${col}">${escapeHtml(p[0]||'?')}</div>
-      <input class="pl-name" value="${escapeHtml(p)}" maxlength="10" data-i="${i}">
+      <input class="pl-name" value="${escapeHtml(p)}" maxlength="10" data-i="${i}" data-orig="${escapeHtml(p)}">
       <button class="pl-del" data-i="${i}">×</button>`;
     list.appendChild(row);
   });
-  list.querySelectorAll('.pl-name').forEach(inp=>inp.oninput=e=>{ players[+e.target.dataset.i]=e.target.value; save('nomigee_players',players); });
-  list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{ players.splice(+e.target.dataset.i,1); save('nomigee_players',players); renderPlayers(); });
+  list.querySelectorAll('.pl-name').forEach(inp=>{
+    inp.oninput=e=>{ players[+e.target.dataset.i]=e.target.value; save('nomigee_players',players); };
+    inp.onchange=e=>{ commitPlayerName(+e.target.dataset.i, e.target); }; // 確定時に一意化＋戦績キー移行
+  });
+  list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{
+    const i=+e.target.dataset.i, nm=players[i];
+    players.splice(i,1); save('nomigee_players',players);
+    if(nm in drinkCounts){ delete drinkCounts[nm]; save('nomigee_scores',drinkCounts); } // 削除メンバーの戦績残骸を除去
+    renderPlayers();
+  });
   $('#pl-hint').textContent = players.length<2 ? '⚠️ 2人以上で登録してね' : `👥 ${players.length}人 登録中`;
 }
 function uniquePlayerName(v){ let n=v, i=2; while(players.includes(n)) n=v+i++; return n; }
+function commitPlayerName(i, inputEl){
+  const orig=inputEl.dataset.orig||'';
+  let v=(inputEl.value||'').trim(); if(!v){ v=orig||('プレイヤー'+(i+1)); }
+  let n=v, k=2; while(players.some((p,j)=>j!==i && p===n)) n=v+(k++); // 自分以外との重複を回避
+  players[i]=n; inputEl.value=n; inputEl.dataset.orig=n; save('nomigee_players',players);
+  if(orig && orig!==n && (orig in drinkCounts)){ drinkCounts[n]=(drinkCounts[n]||0)+drinkCounts[orig]; delete drinkCounts[orig]; save('nomigee_scores',drinkCounts); } // 改名時は戦績を引き継ぎ旧キー削除
+  renderHomeStatus();
+}
 function addPlayer(){
   const inp=$('#pl-input'); const v=inp.value.trim();
   if(!v) return;
@@ -1459,7 +1481,8 @@ function renderStopScores(){
   });
 }
 function judgeStop(){
-  if(!stScores.length) return;
+  if(!stScores.length || $('#st-judge').style.display==='none') return; // 判定は1回だけ（再押下での二重加算を防止）
+  $('#st-judge').style.display='none';
   let worst=-1,wi=-1; stScores.forEach((s,i)=>{ if(s.diff>worst){worst=s.diff;wi=i;} });
   showLoser(stScores[wi].name, '一番ズレた…飲むのは');
 }
@@ -1604,13 +1627,15 @@ function drawMost(){
 }
 function revealMost(){
   audio();
+  if($('#most-reveal').disabled) return; // 発表は1回だけ（連打/再押下での二重加算を防止）
+  $('#most-reveal').disabled=true;
   if(players.length<2){ showLoser('一番指をさされた人！','せーので指名！'); return; }
   const counts=players.map(p=>({name:p, n:mostVotes[p]||0}));
   const max=Math.max(...counts.map(c=>c.n));
   if(max===0){ showLoser('一番指をさされた人！','せーので指名！'); return; }
   const top=counts.filter(c=>c.n===max).map(c=>c.name);
   if(top.length===1){ showLoser(top[0], max+'票で最多！飲むのは'); }
-  else { top.forEach(recordDrink); showLoser(top.join(' と '), max+'票でタイ！飲むのは'); }
+  else { top.forEach(recordDrink); showLoser(top.join(' と '), max+'票でタイ！飲むのは'); $('#flash-tally').style.display=''; } // タイ時も戦績導線を表示
 }
 
 /* ============ WOULD YOU RATHER ============ */
@@ -2183,7 +2208,9 @@ document.querySelectorAll('.back').forEach(b=>{ if(!b.getAttribute('aria-label')
 renderHomeStatus();
 
 /* ============ press ripple ============ */
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
 document.addEventListener('pointerdown', e=>{
+  if(reduceMotion && reduceMotion.matches) return; // reduced-motion時はリップルを生成しない(display:noneでanimationend不発→残留を防ぐ)
   const el=e.target.closest('.btn,.gcard,.omakase-btn');
   if(!el) return;
   const r=el.getBoundingClientRect();
@@ -2194,6 +2221,7 @@ document.addEventListener('pointerdown', e=>{
   sp.style.top=(e.clientY-r.top)+'px';
   el.appendChild(sp);
   sp.addEventListener('animationend',()=>sp.remove());
+  setTimeout(()=>sp.remove(),700); // フォールバック除去(animationend不発時の保険)
 }, {passive:true});
 
 /* unlock audio on first touch */

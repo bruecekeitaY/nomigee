@@ -1,4 +1,4 @@
-const CACHE = 'nomigee-v34';
+const CACHE = 'nomigee-v35';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
