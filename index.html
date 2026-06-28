@@ -1219,7 +1219,7 @@ function renderPlayers(){
   players.forEach((p,i)=>{
     const row=document.createElement('div'); row.className='pl-item';
     const col=COLORS[i%COLORS.length];
-    row.innerHTML=`<div class="pl-dot" style="background:${col}">${(p[0]||'?')}</div>
+    row.innerHTML=`<div class="pl-dot" style="background:${col}">${escapeHtml(p[0]||'?')}</div>
       <input class="pl-name" value="${escapeHtml(p)}" maxlength="10" data-i="${i}">
       <button class="pl-del" data-i="${i}">×</button>`;
     list.appendChild(row);
