@@ -562,6 +562,14 @@ body{
     </div>
     <div class="set-note" id="spice-note">お題ガチャ・私は一度も… の過激さが変わります。</div>
 
+    <div class="set-label" style="margin-top:22px">⏱️ テンポ</div>
+    <div class="seg" id="pace-seg">
+      <button class="seg-btn" data-pace="fast" onclick="setPace('fast')">🐇<span>はやい</span></button>
+      <button class="seg-btn" data-pace="normal" onclick="setPace('normal')">🚶<span>ふつう</span></button>
+      <button class="seg-btn" data-pace="slow" onclick="setPace('slow')">🐢<span>じっくり</span></button>
+    </div>
+    <div class="set-note">時限爆弾・お題ラッシュ・ワードウルフの制限時間が変わります。</div>
+
     <div class="set-label" style="margin-top:22px">🔊 サウンド＆バイブ</div>
     <div class="set-row">
       <div>効果音<div class="set-sub">爆発音・ファンファーレ等</div></div>
@@ -673,7 +681,7 @@ body{
     <div class="center" id="bomb-stage">
       <div class="bomb" id="bomb-emoji">💣</div>
       <div class="task-bubble" id="bomb-task">スタートを押すと爆弾に火がつく。<br>お題に答えたら隣の人へ手渡し！</div>
-      <div class="hint" id="bomb-hint">制限時間はランダム（10〜45秒）。持ってる人が負け。</div>
+      <div class="hint" id="bomb-hint">制限時間はランダム。爆発した時に持ってる人が負け（テンポ設定で長さ変更可）。</div>
       <button class="btn big red" id="bomb-btn" onclick="bombMain()">🔥 スタート</button>
     </div>
   </section>
@@ -904,7 +912,7 @@ body{
           <div class="dare-text" id="rush-cat" style="font-size:20px">ボタンでお題を引こう！</div>
         </div>
         <button class="btn big gold" style="margin-top:16px" onclick="drawRush()">⚡ お題を引く</button>
-        <div class="hint">指名された人が<b>30秒</b>でお題を指定数だけ言えるか挑戦！<br>言えなかったら（or 時間切れ）その人が飲む。</div>
+        <div class="hint">指名された人が<b>制限時間内</b>にお題を指定数だけ言えるか挑戦！<br>言えなかったら（or 時間切れ）その人が飲む。</div>
       </div>
       <!-- playing -->
       <div id="rush-play" style="display:none">
@@ -1023,8 +1031,9 @@ function load(k,d){ try{
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 
 /* ============ settings ============ */
-let settings = Object.assign({sound:true, vibe:true, spice:2, theme:'neon', tts:false}, load('nomigee_settings', {}));
+let settings = Object.assign({sound:true, vibe:true, spice:2, theme:'neon', tts:false, pace:'normal'}, load('nomigee_settings', {}));
 function saveSettings(){ save('nomigee_settings', settings); }
+function paceMul(){ return settings.pace==='fast'?0.6 : settings.pace==='slow'?1.4 : 1; } // タイマー長さの倍率
 /* ============ お題の音声読み上げ (TTS) ============ */
 const TTS_OK = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
 function speak(text){
@@ -1388,7 +1397,7 @@ function bombMain(){
 }
 function startBomb(){
   bombRunning=true; $('#bomb-hint').style.display='none';
-  const dur = 10000 + Math.random()*35000; // 10-45s
+  const dur = (10000 + Math.random()*35000) * paceMul(); // 10-45s × テンポ倍率
   const end = Date.now()+dur;
   $('#bomb-btn').textContent='✅ 答えた！次の人へ';
   $('#bomb-btn').className='btn big gold';
@@ -1816,7 +1825,7 @@ const WOLF_PAIRS=[
   ['焼き鳥','つくね'],['朝顔','ひまわり'],['そば','うどん'],['牛乳','豆乳'],['日記','メモ'],
   ['野球','ソフトボール'],['指輪','ネックレス'],['花火','線香花火'],['カフェ','喫茶店'],['毛布','タオルケット']
 ];
-let wolfN=4, wolfWords=[], wolfDealIdx=0, wolfRevealed=false, wolfWolfIdxs=[], wolfCWord='', wolfWWord='', wolfTimer=null, wolfRemain=180, wolfPaused=false;
+let wolfN=4, wolfWords=[], wolfDealIdx=0, wolfRevealed=false, wolfWolfIdxs=[], wolfCWord='', wolfWWord='', wolfTimer=null, wolfRemain=180, wolfMax=180, wolfPaused=false;
 function resetWolf(){
   stopWolfTimer();
   wolfN=Math.min(12,Math.max(3, players.length||4));
@@ -1865,7 +1874,7 @@ function wolfStartDiscuss(){
   $('#wolf-discuss').style.display='';
   const n=wolfWolfIdxs.length;
   $('#wolf-discuss-hint').innerHTML=`自分の言葉を直接は言わずに話し合い！<br><b>違う言葉を持つウルフ（${n}人）</b>を見つけよう。せーので指さして投票→発表。`;
-  wolfRemain=180; wolfPaused=false; updateWolfRing(); startWolfTimer();
+  wolfMax=Math.round(180*paceMul()); wolfRemain=wolfMax; wolfPaused=false; updateWolfRing(); startWolfTimer();
 }
 function startWolfTimer(){
   stopWolfTimer(); $('#wolf-timer-btn').textContent='⏸ 一時停止';
@@ -1881,7 +1890,7 @@ function toggleWolfTimer(){ wolfPaused=!wolfPaused; $('#wolf-timer-btn').textCon
 function updateWolfRing(){
   const r=$('#wolf-ring'), t=Math.max(0,wolfRemain);
   $('#wolf-time').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
-  r.style.setProperty('--p', t/180*100);
+  r.style.setProperty('--p', t/(wolfMax||180)*100);
   r.style.setProperty('--ring', wolfRemain<=10?'#ff4d5e':wolfRemain<=30?'#ffd84d':'#19e3ff');
 }
 function wolfReveal(){
@@ -1960,7 +1969,7 @@ const RUSH=[
   {c:'チョコ菓子',n:5},{c:'スポーツ選手',n:5},{c:'色の名前',n:8},{c:'ファストフード店',n:4},{c:'飲み会の定番メニュー',n:5},
   {c:'2文字の国名',n:4},{c:'体の部位',n:8},{c:'恐竜',n:4},{c:'カクテル',n:4},{c:'アイドルグループ',n:4}
 ];
-let rushTimer=null, rushRemain=30, rushChallenger='';
+let rushTimer=null, rushRemain=30, rushMax=30, rushChallenger='';
 function resetRush(){
   stopRush();
   $('#rush-idle').style.display=''; $('#rush-play').style.display='none';
@@ -1974,7 +1983,7 @@ function drawRush(){
   $('#rush-idle').style.display='none'; $('#rush-play').style.display='';
   $('#rush-play-text').innerHTML=`<b>${escapeHtml(rushChallenger)}</b> さん！<br>「${escapeHtml(r.c)}」を <b>${r.n}個</b> 言え！`;
   speak(rushChallenger+'さん、'+r.c+'を'+r.n+'個！');
-  rushRemain=30; updateRushRing(); startRush();
+  rushMax=Math.round(30*paceMul()); rushRemain=rushMax; updateRushRing(); startRush();
 }
 function startRush(){
   stopRush();
@@ -1988,7 +1997,7 @@ function updateRushRing(){
   const t=Math.max(0,rushRemain);
   $('#rush-time').textContent='0:'+String(t).padStart(2,'0');
   const ring=$('#rush-ring');
-  ring.style.setProperty('--p', t/30*100);
+  ring.style.setProperty('--p', t/(rushMax||30)*100);
   ring.style.setProperty('--ring', rushRemain<=5?'#ff4d5e':rushRemain<=12?'#ffd84d':'#19e3ff');
 }
 function rushDone(success, timeout){
@@ -2052,6 +2061,7 @@ function finishTapBattle(){
 function renderSettings(){
   document.querySelectorAll('#theme-seg .seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.theme===(settings.theme||'neon')));
   document.querySelectorAll('#spice-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.spice===settings.spice));
+  document.querySelectorAll('#pace-seg .seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.pace===(settings.pace||'normal')));
   $('#sw-sound').classList.toggle('on', !!settings.sound);
   $('#sw-vibe').classList.toggle('on', !!settings.vibe);
   $('#sw-tts').classList.toggle('on', !!settings.tts);
@@ -2063,6 +2073,7 @@ function renderSettings(){
   $('#spice-note').textContent=notes[settings.spice]||'';
 }
 function setSpice(n){ settings.spice=n; saveSettings(); neverBag=[]; renderSettings(); audio(); beep(520+n*140,0.09,'triangle',0.18); buzz(12); }
+function setPace(p){ settings.pace=p; saveSettings(); renderSettings(); audio(); beep(p==='fast'?760:p==='slow'?440:600,0.08,'triangle',0.18); buzz(12); }
 function toggleSet(key){
   settings[key]=!settings[key]; saveSettings(); renderSettings();
   if(key==='sound'&&settings.sound){ audio(); beep(820,0.1,'triangle',0.2); }
