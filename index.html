@@ -124,6 +124,7 @@ body{
 .c-wolf{background:linear-gradient(140deg,#7c8aa8,#2e3a5e)}
 .c-sync{background:linear-gradient(140deg,#ff8fb1,#d6336c)}
 .c-rush{background:linear-gradient(140deg,#ffd93d,#ff3d81)}
+.c-tap{background:linear-gradient(140deg,#3dd6ff,#ff4d6d)}
 .c-players{background:linear-gradient(140deg,#ffd84d,#f08a00)}
 
 /* ---------- press ripple ---------- */
@@ -416,6 +417,20 @@ body{
 .sc-adj{width:34px;height:34px;border:none;border-radius:10px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto;background:rgba(52,232,158,.18);color:var(--green)}
 .sc-adj.minus{background:rgba(255,77,94,.18);color:#ff8a96}
 .sc-adj:active{transform:scale(.88)}
+/* ---------- tap battle ---------- */
+.tap-arena{flex:1;display:flex;align-items:stretch;gap:10px;position:relative;margin:6px 0 12px;min-height:300px}
+.tap-zone{flex:1;border:none;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;color:#fff;font-weight:900;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:transform .05s,opacity .2s,box-shadow .2s;box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 8px 20px rgba(0,0,0,.35)}
+.tap-zone:active{transform:scale(.98)}
+.tap-l{background:linear-gradient(160deg,#2a6cf0,#123a8a)}
+.tap-r{background:linear-gradient(160deg,#ff4d6d,#a01030)}
+.tap-zone.dim{opacity:.4}
+.tap-zone.win{box-shadow:0 0 0 4px var(--gold) inset,0 8px 24px rgba(255,216,77,.4)}
+.tap-name{font-size:17px;opacity:.92;letter-spacing:1px}
+.tap-count{font-size:clamp(46px,16vw,92px);font-variant-numeric:tabular-nums;line-height:1;text-shadow:0 3px 10px rgba(0,0,0,.4)}
+.tap-vs{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;font-size:16px;font-weight:900;letter-spacing:2px;background:var(--bg2);border-radius:12px;padding:6px 11px;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+#tap-foot{display:flex;flex-direction:column;gap:10px}
+#tap-timer{font-variant-numeric:tabular-nums;min-width:54px;text-align:right}
+
 /* ---------- team split ---------- */
 #team-result{display:flex;flex-direction:column;gap:12px}
 .team-card{border-radius:16px;padding:14px;border-left:5px solid var(--tc,#ff4d5e);background:var(--card);animation:rise .3s both}
@@ -513,6 +528,9 @@ body{
       </button>
       <button class="gcard c-rush" onclick="go('rush')">
         <div class="ico">⚡</div><div><div class="nm">お題ラッシュ</div><div class="ds">30秒で◯個言え！言えなきゃ飲む</div></div>
+      </button>
+      <button class="gcard c-tap" onclick="go('tap')">
+        <div class="ico">🥊</div><div><div class="nm">連打バトル</div><div class="ds">2人で連打対決。負けが飲む</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
         <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds" id="home-pl-ds">参加者を登録（名前がお題に登場）</div></div>
@@ -895,6 +913,20 @@ body{
     </div>
   </section>
 
+  <!-- 連打バトル -->
+  <section class="screen" id="s-tap">
+    <div class="topbar"><button class="back" onclick="stopTapAll();go('home')">‹</button><div class="title-sm">🥊 連打バトル</div><div class="spacer"></div><div class="title-sm" id="tap-timer">3.0</div></div>
+    <div class="tap-arena" id="tap-arena">
+      <button class="tap-zone tap-l" id="tap-l" onpointerdown="tapHit('l')"><div class="tap-name">🔵 1P</div><div class="tap-count" id="tap-l-n">0</div></button>
+      <div class="tap-vs" id="tap-vs">VS</div>
+      <button class="tap-zone tap-r" id="tap-r" onpointerdown="tapHit('r')"><div class="tap-name">🔴 2P</div><div class="tap-count" id="tap-r-n">0</div></button>
+    </div>
+    <div id="tap-foot">
+      <button class="btn big gold" id="tap-btn" onclick="startTapBattle()">🥊 バトル開始！</button>
+      <div class="hint" id="tap-hint">左右に分かれて、合図で<b>3秒間連打</b>！<br>タップ数が少ない方が飲む（同数は両方ひと口）。</div>
+    </div>
+  </section>
+
   <!-- result flash overlay -->
   <div class="flash" id="flash">
     <div class="drink">🍺</div>
@@ -951,6 +983,7 @@ function go(name){
   if(name==='wolf'){ resetWolf(); }
   if(name==='sync'){ resetSync(); }
   if(name==='rush'){ resetRush(); }
+  if(name==='tap'){ resetTap(); }
   if(name==='settings'){ renderSettings(); }
   if(name==='score'){ renderScore(); }
   if(name==='share'){ renderShare(); }
@@ -961,6 +994,7 @@ function go(name){
   if(current==='wolf' && name!=='wolf') stopWolfTimer();
   if(current==='sync' && name!=='sync') stopSync();
   if(current==='rush' && name!=='rush') stopRush();
+  if(current==='tap' && name!=='tap') stopTapAll();
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
   current = name;
@@ -1879,6 +1913,51 @@ function rushDone(success, timeout){
   }
 }
 
+/* ============ 連打バトル (tap battle) ============ */
+let tapL=0, tapR=0, tapRunning=false, tapTimer=null, tapCdTimer=null, tapRemain=0;
+function stopTapAll(){ if(tapTimer){clearInterval(tapTimer);tapTimer=null;} if(tapCdTimer){clearTimeout(tapCdTimer);tapCdTimer=null;} tapRunning=false; }
+function updateTapCounts(){ $('#tap-l-n').textContent=tapL; $('#tap-r-n').textContent=tapR; }
+function resetTap(){
+  stopTapAll(); tapL=0; tapR=0; updateTapCounts();
+  $('#tap-timer').textContent='3.0';
+  $('#tap-l').classList.remove('dim','win'); $('#tap-r').classList.remove('dim','win');
+  $('#tap-btn').style.display=''; $('#tap-btn').textContent='🥊 バトル開始！'; $('#tap-btn').disabled=false;
+  $('#tap-hint').style.display='';
+}
+function tapHit(side){
+  if(!tapRunning) return;
+  if(side==='l') tapL++; else tapR++;
+  updateTapCounts(); beep(side==='l'?480:660,0.02,'square',0.07);
+}
+function startTapBattle(){
+  audio(); stopTapAll();
+  tapL=0; tapR=0; updateTapCounts();
+  $('#tap-l').classList.remove('dim','win'); $('#tap-r').classList.remove('dim','win');
+  $('#tap-btn').style.display='none'; $('#tap-hint').style.display='none';
+  let c=3;
+  const cd=()=>{
+    if(c>0){ $('#tap-timer').textContent=c; beep(560,0.12,'square',0.18); buzz(12); c--; tapCdTimer=setTimeout(cd,800); }
+    else { $('#tap-timer').textContent='START'; beep(950,0.2,'triangle',0.22); buzz([20,40,40]); tapCdTimer=setTimeout(runTapBattle,500); }
+  };
+  $('#tap-timer').textContent='よ〜い'; cd();
+}
+function runTapBattle(){
+  tapRunning=true; tapRemain=3.0; $('#tap-timer').textContent='3.0';
+  tapTimer=setInterval(()=>{
+    tapRemain=Math.max(0, tapRemain-0.1);
+    $('#tap-timer').textContent=tapRemain.toFixed(1);
+    if(tapRemain<=0) finishTapBattle();
+  },100);
+}
+function finishTapBattle(){
+  stopTapAll();
+  if(tapL>tapR){ $('#tap-l').classList.add('win'); $('#tap-r').classList.add('dim'); }
+  else if(tapR>tapL){ $('#tap-r').classList.add('win'); $('#tap-l').classList.add('dim'); }
+  $('#tap-btn').style.display=''; $('#tap-btn').textContent='🔄 もう一回'; $('#tap-hint').style.display='';
+  if(tapL===tapR) showLoser('引き分け→両方ひと口🍻', `${tapL} 対 ${tapR}！`);
+  else showLoser(tapL<tapR?'🔵 1P（左）の負け':'🔴 2P（右）の負け', `${tapL} 対 ${tapR}、飲むのは`);
+}
+
 /* ============ SETTINGS UI ============ */
 function renderSettings(){
   document.querySelectorAll('#theme-seg .seg-btn').forEach(b=>b.classList.toggle('on', b.dataset.theme===(settings.theme||'neon')));
@@ -1949,7 +2028,8 @@ const HOWTO=[
   {ico:'👑',name:'王様ゲーム',col:'#ffd84d',desc:'番号を配り、王様が番号を指定して命令。',drink:'指名された人が従う or 一気'},
   {ico:'🐺',name:'ワードウルフ',col:'#7c8aa8',desc:'1人だけ違う言葉＝ウルフ。話し合って探す。',drink:'当てたらウルフ／外したら市民が飲む'},
   {ico:'💞',name:'以心伝心',col:'#ff8fb1',desc:'2人がせーので同じ答えを狙う。',drink:'一致＝他全員／バラバラ＝2人が飲む'},
-  {ico:'⚡',name:'お題ラッシュ',col:'#ff3d81',desc:'指名された人が30秒でお題を指定数言えるか挑戦。',drink:'言えなかった人が飲む'}
+  {ico:'⚡',name:'お題ラッシュ',col:'#ff3d81',desc:'指名された人が30秒でお題を指定数言えるか挑戦。',drink:'言えなかった人が飲む'},
+  {ico:'🥊',name:'連打バトル',col:'#ff4d6d',desc:'2人で画面の左右を3秒間連打して対決。',drink:'タップ数が少ない方が飲む'}
 ];
 function renderHowto(){
   const box=$('#howto-list'); if(box.children.length) return; // build once
@@ -1964,7 +2044,7 @@ function renderHowto(){
 }
 
 /* ============ おまかせ (random game picker) ============ */
-const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync','rush'];
+const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync','rush','tap'];
 let omakaseRunning=false;
 function omakase(){
   if(omakaseRunning) return;
