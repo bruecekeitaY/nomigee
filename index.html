@@ -1001,6 +1001,7 @@ function go(name){
   screens.forEach(s=>s.classList.toggle('active', s.id==='s-'+name));
   document.getElementById('s-'+name).scrollTop = 0;
   current = name;
+  if(typeof GAMES!=='undefined'){ if(GAMES.includes(name)) requestWake(); else releaseWake(); }
 }
 
 const COLORS = ['#ff2e88','#7b5bff','#19e3ff','#ffd84d','#34e89e','#ff8a3d','#ff5e6e','#b06bff','#3dd6ff','#ffb23d'];
@@ -2119,9 +2120,17 @@ function shuffleTeams(){
   beep(800,0.12,'triangle',0.2); confetti();
 }
 
-/* ============ 省電力: タブ非表示で背景アニメ停止 ============ */
+/* ============ 画面スリープ防止 (Wake Lock) ============ */
+let wakeLock=null;
+async function requestWake(){
+  try{ if('wakeLock' in navigator && !wakeLock && !document.hidden){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; }); } }catch(e){ wakeLock=null; }
+}
+async function releaseWake(){ try{ if(wakeLock){ const w=wakeLock; wakeLock=null; await w.release(); } }catch(e){ wakeLock=null; } }
+
+/* ============ 省電力: タブ非表示で背景アニメ停止 + Wake Lock再取得 ============ */
 document.addEventListener('visibilitychange', ()=>{
   const fx=document.getElementById('bgfx'); if(fx) fx.classList.toggle('paused', document.hidden);
+  if(!document.hidden && typeof current!=='undefined' && GAMES.includes(current)) requestWake();
 });
 
 /* ============ animated background bubbles ============ */
