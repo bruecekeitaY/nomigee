@@ -515,7 +515,7 @@ body{
         <div class="ico">⚡</div><div><div class="nm">お題ラッシュ</div><div class="ds">30秒で◯個言え！言えなきゃ飲む</div></div>
       </button>
       <button class="gcard c-players" onclick="go('players')">
-        <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds">参加者を登録（ルーレット等で使用）</div></div>
+        <div class="ico">👥</div><div><div class="nm">メンバー</div><div class="ds" id="home-pl-ds">参加者を登録（名前がお題に登場）</div></div>
       </button>
     </div>
     <div class="note">飲みすぎ注意 🚱 楽しく適量に。20歳未満は飲酒禁止。</div>
@@ -932,7 +932,13 @@ const $ = s => document.querySelector(s);
 const screens = [...document.querySelectorAll('.screen')];
 let current = 'home';
 
+function renderHomeStatus(){
+  const ds=$('#home-pl-ds'); if(!ds) return;
+  const n=players.filter(p=>p&&p.trim()).length;
+  ds.textContent = n>0 ? `👥 ${n}人 登録中・タップで編集` : '参加者を登録（名前がお題に登場）';
+}
 function go(name){
+  if(name==='home'){ renderHomeStatus(); }
   if(name==='roulette'){ buildWheel(); }
   if(name==='russian'){ ensureRussian(); }
   if(name==='players'){ renderPlayers(); setTimeout(()=>$('#pl-input').focus(),300); }
@@ -2055,6 +2061,7 @@ let deepLinked=false;
 
 /* ============ a11y: アイコンボタンにラベル ============ */
 document.querySelectorAll('.back').forEach(b=>{ if(!b.getAttribute('aria-label')) b.setAttribute('aria-label','戻る'); });
+renderHomeStatus();
 
 /* ============ press ripple ============ */
 document.addEventListener('pointerdown', e=>{
