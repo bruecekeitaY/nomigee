@@ -174,6 +174,12 @@ body{
 .add-row input:focus{border-color:var(--neon2)}
 .add-row button{flex:0 0 auto;width:58px;border:none;border-radius:16px;background:linear-gradient(92deg,var(--neon),var(--neon2));color:#fff;font-size:26px;font-weight:800;cursor:pointer}
 .add-row button:active{transform:scale(.9)}
+.pair-row{display:flex;gap:7px;align-items:center;margin-bottom:14px}
+.pair-row input{flex:1;min-width:0;background:var(--card);border:2px solid transparent;border-radius:14px;padding:13px 12px;color:#fff;font-size:15px;font-weight:600;outline:none}
+.pair-row input:focus{border-color:var(--neon2)}
+.pair-vs{font-size:16px;font-weight:900;opacity:.7;flex:0 0 auto}
+.pair-row button{flex:0 0 auto;width:50px;border:none;border-radius:14px;background:linear-gradient(92deg,var(--neon),var(--neon2));color:#fff;font-size:24px;font-weight:800;cursor:pointer}
+.pair-row button:active{transform:scale(.9)}
 
 /* ---------- Roulette ---------- */
 .wheel-wrap{position:relative;width:min(82vw,340px);height:min(82vw,340px);margin:6px auto}
@@ -852,6 +858,7 @@ body{
           <button class="step-btn" onclick="wolfStep(1)">＋</button>
         </div>
         <button class="btn big gold" style="margin-top:18px" onclick="wolfDeal()">🎴 言葉を配る</button>
+        <button class="btn ghost" style="margin-top:10px" onclick="go('wolfcustom')">✏️ 自分の言葉ペアを追加</button>
       </div>
       <!-- dealing -->
       <div id="wolf-deal" style="display:none">
@@ -881,6 +888,23 @@ body{
         <div class="hint">ウルフを当てたら→<b>ウルフが一気</b>／外したら→<b>市民が飲む</b>！</div>
       </div>
     </div>
+  </section>
+
+  <!-- カスタム言葉ペア (ワードウルフ) -->
+  <section class="screen" id="s-wolfcustom">
+    <div class="topbar"><button class="back" onclick="go('wolf')">‹</button><div class="title-sm">✏️ カスタム言葉ペア</div></div>
+    <div class="hint" style="margin-bottom:10px">ワードウルフに混ざる言葉ペアを追加。<b>市民とウルフ用の"似た2語"</b>を入れてね。<br>例：市民「ラーメン」／ウルフ「うどん」</div>
+    <div class="pair-row">
+      <input id="wc-a" type="text" placeholder="言葉A（市民）" maxlength="12" autocomplete="off">
+      <span class="pair-vs">/</span>
+      <input id="wc-b" type="text" placeholder="言葉B（ウルフ）" maxlength="12" autocomplete="off"
+        onkeydown="if(event.key==='Enter')addWolfPair()">
+      <button onclick="addWolfPair()">＋</button>
+    </div>
+    <div class="pl-list" id="wc-list"></div>
+    <div class="hint" id="wc-hint"></div>
+    <div class="spacer"></div>
+    <button class="btn ghost" onclick="go('wolf')">ワードウルフへ戻る</button>
   </section>
 
   <!-- 以心伝心 -->
@@ -1005,6 +1029,7 @@ function go(name){
   if(name==='share'){ renderShare(); }
   if(name==='howto'){ renderHowto(); }
   if(name==='custom'){ renderCustom(); setTimeout(()=>$('#cd-input').focus(),300); }
+  if(name==='wolfcustom'){ renderWolfPairs(); setTimeout(()=>$('#wc-a').focus(),300); }
   if(name==='teams'){ resetTeams(); }
   if(current==='roulette' && name!=='roulette') stopRoulette();
   if(current==='russian' && name!=='russian') stopRussian();
@@ -1053,6 +1078,7 @@ function applyTheme(){
 function setTheme(t){ settings.theme=t; saveSettings(); applyTheme(); renderSettings(); audio(); beep(560,0.09,'triangle',0.18); buzz(12); }
 applyTheme();
 let customDares = load('nomigee_custom', []);
+let customWolfPairs = load('nomigee_wolfpairs', []);
 
 /* ============ toast + 責任ある飲酒リマインド ============ */
 let toastTimer=null;
@@ -1311,6 +1337,27 @@ function addCustom(){
   const inp=$('#cd-input'); const v=inp.value.trim();
   if(!v) return;
   customDares.push(v); save('nomigee_custom',customDares); inp.value=''; renderCustom(); buzz(15);
+}
+
+/* ============ カスタム言葉ペア (ワードウルフ) ============ */
+function renderWolfPairs(){
+  const list=$('#wc-list'); list.innerHTML='';
+  customWolfPairs.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='pl-item';
+    row.innerHTML=`<div class="pl-dot" style="background:#7c8aa8">🐺</div>
+      <div class="pl-name">${escapeHtml(p[0])} <span style="opacity:.6">/</span> ${escapeHtml(p[1])}</div>
+      <button class="pl-del" data-i="${i}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.pl-del').forEach(b=>b.onclick=e=>{ customWolfPairs.splice(+e.target.dataset.i,1); save('nomigee_wolfpairs',customWolfPairs); renderWolfPairs(); });
+  $('#wc-hint').textContent = customWolfPairs.length ? `✏️ ${customWolfPairs.length}ペア 登録中（ワードウルフに混ざります）` : 'まだ無し。似た2語のペアを追加しよう！';
+}
+function addWolfPair(){
+  const a=($('#wc-a').value||'').trim(), b=($('#wc-b').value||'').trim();
+  if(!a||!b){ showToast('2語とも入力してね'); return; }
+  if(a===b){ showToast('違う2語を入れてね'); return; }
+  customWolfPairs.push([a,b]); save('nomigee_wolfpairs',customWolfPairs);
+  $('#wc-a').value=''; $('#wc-b').value=''; $('#wc-a').focus(); renderWolfPairs(); buzz(15);
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1835,7 +1882,8 @@ function resetWolf(){
 function wolfStep(d){ wolfN=Math.min(12,Math.max(3,wolfN+d)); $('#wolf-n').textContent=wolfN; buzz(10); beep(520,0.04,'square',0.1); }
 function wolfDeal(){
   audio(); stopWolfTimer();
-  const pair=WOLF_PAIRS[Math.floor(Math.random()*WOLF_PAIRS.length)];
+  const pool=WOLF_PAIRS.concat(customWolfPairs.filter(p=>p&&p[0]&&p[1]&&p[0]!==p[1])); // カスタムペアも混ぜる
+  const pair=pool[Math.floor(Math.random()*pool.length)];
   const swap=Math.random()<0.5;
   wolfCWord=swap?pair[1]:pair[0]; wolfWWord=swap?pair[0]:pair[1];
   const numWolves = wolfN>=7 ? 2 : 1; // 標準ルール: 7人以上はウルフ2人
