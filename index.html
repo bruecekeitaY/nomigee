@@ -2196,11 +2196,12 @@ function renderHowto(){
 
 /* ============ おまかせ (random game picker) ============ */
 const GAMES=['roulette','bomb','russian','stop','dare','never','most','would','king','wolf','sync','rush','tap'];
-let omakaseRunning=false;
+let omakaseRunning=false, lastOmakase=null;
 function omakase(){
   if(omakaseRunning) return;
   omakaseRunning=true; audio();
-  const finalName=GAMES[Math.floor(Math.random()*GAMES.length)];
+  const pool=GAMES.filter(g=>g!==lastOmakase); // 直前と同じゲームは避ける
+  const finalName=pool[Math.floor(Math.random()*pool.length)]; lastOmakase=finalName;
   const cards=GAMES.map(g=>document.querySelector('.c-'+g));
   const clearHl=()=>cards.forEach(c=>c&&c.classList.remove('omakase-hl'));
   let ticks=0; const total=20;
