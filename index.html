@@ -339,7 +339,9 @@ body{
 @keyframes flashin{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
 .flash>*{position:relative;z-index:1}
 .flash .loser-label{font-size:18px;font-weight:800;letter-spacing:4px;color:#ffd84d;text-shadow:0 2px 10px rgba(0,0,0,.5)}
-.flash .loser-name{font-size:clamp(40px,14vw,80px);font-weight:900;line-height:1.05;text-shadow:0 4px 18px rgba(0,0,0,.6)}
+.flash .loser-name{font-size:clamp(40px,14vw,80px);font-weight:900;line-height:1.05;text-shadow:0 4px 18px rgba(0,0,0,.6);animation:losername .5s cubic-bezier(.2,1.5,.35,1) both}
+@keyframes losername{0%{transform:scale(.4) rotate(-6deg);opacity:0}60%{transform:scale(1.12) rotate(2deg)}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion: reduce){ .flash .loser-name{animation:none} }
 .flash .drink{font-size:88px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));animation:drinkbounce .9s ease-in-out infinite}
 @keyframes drinkbounce{0%,100%{transform:translateY(0) rotate(-7deg)}50%{transform:translateY(-14px) rotate(7deg)}}
 .flash-penalty{
@@ -1132,13 +1134,15 @@ function confetti(){
 let lastLoser=null;
 function showLoser(name,label='飲むのは…'){
   $('#flash-label').textContent=label;
-  $('#flash-name').textContent=name;
+  const nm=$('#flash-name'); nm.textContent=name;
+  nm.style.animation='none'; void nm.offsetWidth; nm.style.animation=''; // 登場ポップ演出を再生
   $('#flash').classList.add('show');
   lastLoser = recordDrink(name); // auto-tally if it's a registered member
   $('#flash-tally').style.display = lastLoser ? '' : 'none';
   resetPenalty();
   noteDrinkEvent(); // 責任ある飲酒: 一定回数ごとにお水リマインド
   fanfare(); confetti();
+  speak(String(label).replace(/[…！]/g,'')+'、'+name); // 結果を音声で発表
 }
 function hideFlash(){ $('#flash').classList.remove('show'); stopPenalty(); }
 
@@ -1175,11 +1179,13 @@ function drawPenalty(){
     beep(500+Math.random()*450,0.03,'square',0.1); buzz(5);
     if(ticks<total){ penaltyTimer=setTimeout(spin, 55+ticks*ticks*1.1); }
     else {
-      box.textContent='🎲 '+PENALTIES[Math.floor(Math.random()*PENALTIES.length)];
+      const finalP=PENALTIES[Math.floor(Math.random()*PENALTIES.length)];
+      box.textContent='🎲 '+finalP;
       box.classList.add('settle');
       beep(950,0.22,'triangle',0.22); buzz([20,40,40]);
       btn.disabled=false; btn.textContent='🎲 もう一度引く';
       penaltyTimer=null; penaltySpinning=false;
+      speak('罰ゲーム。'+finalP); // 確定した罰ゲームを読み上げ
     }
   };
   spin();
