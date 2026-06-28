@@ -569,6 +569,10 @@ body{
       <div>バイブ<div class="set-sub">対応端末のみ振動</div></div>
       <button class="sw" id="sw-vibe" onclick="toggleSet('vibe')"><span class="knob"></span></button>
     </div>
+    <div class="set-row">
+      <div>お題の読み上げ<div class="set-sub">引いたお題を音声で(対応端末のみ)</div></div>
+      <button class="sw" id="sw-tts" onclick="toggleSet('tts')"><span class="knob"></span></button>
+    </div>
 
     <button class="btn ghost" style="margin-top:18px" onclick="go('howto')">❓ 遊び方ガイドを見る</button>
     <div class="spacer"></div>
@@ -971,6 +975,7 @@ function renderHomeStatus(){
   ds.textContent = n>0 ? `👥 ${n}人 登録中・タップで編集` : '参加者を登録（名前がお題に登場）';
 }
 function go(name){
+  if(TTS_OK) try{ speechSynthesis.cancel(); }catch(e){} // 画面遷移で読み上げを停止
   if(name==='home'){ renderHomeStatus(); }
   if(name==='roulette'){ buildWheel(); }
   if(name==='russian'){ ensureRussian(); }
@@ -1016,8 +1021,19 @@ function load(k,d){ try{
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
 
 /* ============ settings ============ */
-let settings = Object.assign({sound:true, vibe:true, spice:2, theme:'neon'}, load('nomigee_settings', {}));
+let settings = Object.assign({sound:true, vibe:true, spice:2, theme:'neon', tts:false}, load('nomigee_settings', {}));
 function saveSettings(){ save('nomigee_settings', settings); }
+/* ============ お題の音声読み上げ (TTS) ============ */
+const TTS_OK = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+function speak(text){
+  if(!settings.tts || !TTS_OK || !text) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(String(text).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}🅰🅱]/gu,' ').replace(/\s+/g,' ').trim());
+    u.lang='ja-JP'; u.rate=1.05; u.pitch=1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', settings.theme||'neon');
   const mt=document.querySelector('meta[name=theme-color]');
@@ -1539,7 +1555,7 @@ function drawDare(mode){
   card.className='dare-card '+m.cls;
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   card.innerHTML=`<div class="dare-type">${m.label}</div><div class="dare-ico">${m.ico}</div><div class="dare-text">${escapeHtml(text)}</div>`;
-  beep(660,0.1,'triangle',0.2);
+  beep(660,0.1,'triangle',0.2); speak(text);
   if(type==='drink'||type==='all'){ setTimeout(()=>{fanfare();confetti();},150); }
 }
 
@@ -1582,7 +1598,7 @@ function drawNever(){
   const card=$('#never-card');
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
   card.querySelector('.dare-text').textContent=text;
-  beep(620,0.1,'triangle',0.2);
+  beep(620,0.1,'triangle',0.2); speak(text);
 }
 
 /* ============ MOST LIKELY TO ============ */
@@ -1623,7 +1639,7 @@ function drawMost(){
   mostVotes={};
   if(players.length>=2){ renderMostVotes(); $('#most-votes').style.display='flex'; }
   else { $('#most-votes').style.display='none'; }
-  beep(620,0.1,'triangle',0.2);
+  beep(620,0.1,'triangle',0.2); speak(text);
 }
 function revealMost(){
   audio();
@@ -1673,7 +1689,7 @@ function drawWould(){
   $('#would-a-n').textContent='0'; $('#would-b-n').textContent='0';
   $('#would-opts').style.display='flex';
   $('#would-reveal').disabled=false;
-  beep(700,0.1,'triangle',0.2);
+  beep(700,0.1,'triangle',0.2); speak(a+'か、'+b+'か。どっち派？');
 }
 function wouldVote(side){
   if($('#would-opts').style.display==='none') return;
@@ -1766,8 +1782,9 @@ function kingReroll(){
   audio();
   const card=$('#king-order-card');
   card.style.animation='none'; void card.offsetWidth; card.style.animation='';
-  $('#king-order-text').textContent=kingPickOrder();
-  beep(720,0.1,'triangle',0.2); buzz(15);
+  const ord=kingPickOrder();
+  $('#king-order-text').textContent=ord;
+  beep(720,0.1,'triangle',0.2); buzz(15); speak('王様の命令。'+ord);
 }
 
 /* ============ WORD WOLF (ワードウルフ) ============ */
@@ -1902,7 +1919,7 @@ function drawSync(){
       ico.style.fontSize=''; ico.textContent='💞';
       $('#sync-text').innerHTML=`お題：<b>「${escapeHtml(syncCat)}」</b><br><span style="font-size:.7em;opacity:.85">${escapeHtml(syncA)} と ${escapeHtml(syncB)}、せーので発表！</span>`;
       $('#sync-judge').style.display='flex'; $('#sync-draw').disabled=false; $('#sync-draw').textContent='💞 次のお題';
-      beep(700,0.1,'triangle',0.2); syncTimer=null;
+      beep(700,0.1,'triangle',0.2); syncTimer=null; speak(syncCat);
     }
   };
   tick();
@@ -1940,6 +1957,7 @@ function drawRush(){
   rushChallenger=pickNames(1)[0];
   $('#rush-idle').style.display='none'; $('#rush-play').style.display='';
   $('#rush-play-text').innerHTML=`<b>${escapeHtml(rushChallenger)}</b> さん！<br>「${escapeHtml(r.c)}」を <b>${r.n}個</b> 言え！`;
+  speak(rushChallenger+'さん、'+r.c+'を'+r.n+'個！');
   rushRemain=30; updateRushRing(); startRush();
 }
 function startRush(){
@@ -2020,6 +2038,7 @@ function renderSettings(){
   document.querySelectorAll('#spice-seg .seg-btn').forEach(b=>b.classList.toggle('on', +b.dataset.spice===settings.spice));
   $('#sw-sound').classList.toggle('on', !!settings.sound);
   $('#sw-vibe').classList.toggle('on', !!settings.vibe);
+  $('#sw-tts').classList.toggle('on', !!settings.tts);
   const notes={
     1:'😊 ソフト：健全なお題だけ。職場の飲み会や初対面でも安心。',
     2:'😎 ノーマル：定番のお題でほどよく盛り上がる。',
@@ -2032,6 +2051,7 @@ function toggleSet(key){
   settings[key]=!settings[key]; saveSettings(); renderSettings();
   if(key==='sound'&&settings.sound){ audio(); beep(820,0.1,'triangle',0.2); }
   if(key==='vibe'&&settings.vibe) buzz(25);
+  if(key==='tts'&&settings.tts) speak('読み上げをオンにしました');
 }
 
 /* ============ SHARE / INSTALL ============ */
