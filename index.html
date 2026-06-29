@@ -431,6 +431,13 @@ body{
 /* ---------- Scoreboard ---------- */
 .score-top{text-align:center;font-size:15px;font-weight:800;color:var(--gold);margin:4px 0 14px;line-height:1.4;min-height:21px}
 .score-board{display:flex;flex-direction:column;gap:10px}
+/* ---------- Lottie empty state (戦績/メンバー未登録) ---------- */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px 12px 8px;text-align:center;animation:rise .4s both}
+.empty-anim{width:min(46vw,150px);height:min(46vw,150px);filter:drop-shadow(0 10px 26px rgba(0,0,0,.35))}
+.empty-state .es-title{color:#fff;font-size:16px;font-weight:900;letter-spacing:.3px}
+.empty-state .es-text{color:var(--dim);font-size:13px;font-weight:700;line-height:1.6;max-width:260px}
+.empty-state .es-cta{margin-top:6px;max-width:240px}
+@media (prefers-reduced-motion: reduce){ .empty-anim{display:none} }
 .sc-row{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:10px 12px;animation:rise .3s both}
 .sc-medal{font-size:20px;width:24px;text-align:center;flex:0 0 auto}
 .sc-dot{width:34px;height:34px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#1a0a3a}
@@ -1287,13 +1294,23 @@ function shareScores(){
     else showToast('この端末では共有に未対応です');
   }
 }
+/* Lottieの空状態マスコット(ビールジョッキ)を任意コンテナにマウント。再描画時は前インスタンスを破棄 */
+const _emptyAnims={};
+function mountEmptyMug(id){
+  try{ if(_emptyAnims[id]){ _emptyAnims[id].destroy(); delete _emptyAnims[id]; } }catch(e){}
+  if(!window.lottie) return;
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const el=document.getElementById(id); if(!el) return;
+  try{ _emptyAnims[id]=lottie.loadAnimation({container:el,renderer:'svg',loop:true,autoplay:true,path:'anim/loader.json'}); }catch(e){}
+}
 function renderScore(){
+  try{ if(_emptyAnims['score-empty-anim']){ _emptyAnims['score-empty-anim'].destroy(); delete _emptyAnims['score-empty-anim']; } }catch(e){}
   const box=$('#score-board'); box.innerHTML='';
   const rows=players.map((p,i)=>({name:p, n:drinkCounts[p]||0, col:COLORS[i%COLORS.length]}))
     .sort((a,b)=>b.n-a.n);
   const max=Math.max(1,...rows.map(r=>r.n));
   const medals=['🥇','🥈','🥉'];
-  if(!players.length){ box.innerHTML='<div class="hint" style="text-align:center">メンバーを登録すると、負けた回数を自動集計します。</div>'; $('#score-top').textContent=''; return; }
+  if(!players.length){ box.innerHTML='<div class="empty-state"><div class="empty-anim" id="score-empty-anim" aria-hidden="true"></div><div class="es-title">まだ記録がありません</div><div class="es-text">メンバーを登録すると、誰が何回飲んだかを自動でカウントします🍺</div><button class="btn es-cta" onclick="go(\'players\')">👥 メンバーを登録</button></div>'; $('#score-top').textContent=''; mountEmptyMug('score-empty-anim'); return; }
   let topName = rows[0] && rows[0].n>0 ? rows[0].name : null;
   $('#score-top').textContent = topName ? `👑 今夜の一番飲まされ番長は「${topName}」！` : 'まだ勝負はこれから…🍺';
   rows.forEach((r,idx)=>{
@@ -1314,6 +1331,13 @@ function renderScore(){
 /* ============ PLAYERS ============ */
 function renderPlayers(){
   const list=$('#pl-list'); list.innerHTML='';
+  try{ if(_emptyAnims['pl-empty-anim']){ _emptyAnims['pl-empty-anim'].destroy(); delete _emptyAnims['pl-empty-anim']; } }catch(e){}
+  if(!players.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-anim" id="pl-empty-anim" aria-hidden="true"></div><div class="es-title">メンバーを追加しよう</div><div class="es-text">下の欄に名前を入れて参加者を登録。お題に名前が登場し、負け数も自動で集計されます🍻</div></div>';
+    mountEmptyMug('pl-empty-anim');
+    $('#pl-hint').textContent='⚠️ 2人以上で登録してね';
+    return;
+  }
   players.forEach((p,i)=>{
     const row=document.createElement('div'); row.className='pl-item';
     const col=COLORS[i%COLORS.length];
