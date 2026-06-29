@@ -1,5 +1,5 @@
-const CACHE = 'nomigee-v42';
-const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './lottie_svg.min.js', './anim/loader.json'];
+const CACHE = 'nomigee-v43';
+const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './lottie_svg.min.js', './anim/loader.json', './anim/celebrate.json'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
